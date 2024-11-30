@@ -807,7 +807,7 @@ int CAimbotProjectile::CanHit(Target_t& target, CTFPlayer* pLocal, CTFWeaponBase
 		G::BoxStorage.push_back({ target.m_pEntity->m_vecOrigin() + tInfo.m_vTargetEye + vPoint * tInfo.m_flRadius / (tInfo.m_flRadius + flSize), { -1, -1, -1 }, { 1, 1, 1 }, {}, I::GlobalVars->curtime + 60.f, Vars::Colors::Local.Value });
 #endif
 	
-	Vec3 vAngleTo, vPredicted, vTarget;
+	Vec3 vAngleTo, vPredicted, vTarget, vOriginalPoint;
 	int iLowestPriority = std::numeric_limits<int>::max(); float flLowestDist = std::numeric_limits<float>::max();
 	int iLowestSmoothPriority = iLowestPriority; float flLowestSmoothDist = flLowestDist;
 	for (int i = 1; i < iMaxTime; i++)
@@ -844,7 +844,7 @@ int CAimbotProjectile::CanHit(Target_t& target, CTFPlayer* pLocal, CTFWeaponBase
 		for (auto& [vPoint, iPriority, iIndex] : vPoints) // get most ideal point
 		{
 			const bool bSplash = iIndex == -1;
-			Vec3 vOriginalPoint = vPoint.m_vPoint;
+			vOriginalPoint = vPoint.m_vPoint;
 
 			if (target.m_nAimedHitbox == HITBOX_HEAD)
 				vPoint.m_vPoint = PullPoint(vPoint.m_vPoint, tInfo.m_vLocalEye, tInfo, target.m_pEntity->m_vecMins(), target.m_pEntity->m_vecMaxs(), target.m_vPos);
@@ -863,6 +863,8 @@ int CAimbotProjectile::CanHit(Target_t& target, CTFPlayer* pLocal, CTFWeaponBase
 				mDirectPoints.erase(iIndex);
 			if (vPoint.m_Solution.m_iCalculated != 1)
 				continue;
+			if (Vars::Aimbot::General::AimType.Value == Vars::Aimbot::General::AimTypeEnum::Silent)
+				G::AimPosition = vOriginalPoint;
 
 			Vec3 vAngles = Aim(G::CurrentUserCmd->viewangles, { vPoint.m_Solution.m_flPitch, vPoint.m_Solution.m_flYaw, 0.f });
 			std::deque<Vec3> vProjLines;
@@ -899,6 +901,7 @@ int CAimbotProjectile::CanHit(Target_t& target, CTFPlayer* pLocal, CTFWeaponBase
 
 	const float flTime = TICKS_TO_TIME(pProjectilePath->size());
 	target.m_vPos = vTarget;
+	
 
 	if (iLowestPriority != std::numeric_limits<int>::max() &&
 		(target.m_TargetType == ETargetType::Player ? !storage.m_bFailed : true)) // don't attempt to aim at players when movesim fails
@@ -1029,7 +1032,7 @@ bool CAimbotProjectile::RunMain(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUser
 	if (Vars::Aimbot::General::AimHoldsFire.Value == Vars::Aimbot::General::AimHoldsFireEnum::Always && !G::CanPrimaryAttack && G::LastUserCmd->buttons & IN_ATTACK && Vars::Aimbot::General::AimType.Value && !pWeapon->IsInReload())
 		pCmd->buttons |= IN_ATTACK;
 	// the G::DoubleTap condition is not a great fix here and actually properly predicting when shots will be fired should likely be done over this, but it's fine for now
-	if (!Vars::Aimbot::General::AimType.Value || !G::CanPrimaryAttack && !G::Reloading && !G::DoubleTap && Vars::Aimbot::General::AimType.Value == Vars::Aimbot::General::AimTypeEnum::Silent && nWeaponID != TF_WEAPON_PIPEBOMBLAUNCHER && nWeaponID != TF_WEAPON_CANNON)
+	if (!Vars::Aimbot::General::AimType.Value)
 		return false;
 
 	auto targets = SortTargets(pLocal, pWeapon);
@@ -1052,6 +1055,8 @@ bool CAimbotProjectile::RunMain(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUser
 #endif
 	for (auto& target : targets)
 	{
+		G::Target = { target.m_pEntity->entindex( ), I::GlobalVars->tickcount };
+
 		float flTimeTo = 0.f; std::deque<Vec3> vPlayerPath, vProjectilePath; std::vector<DrawBox> vBoxes = {};
 		const int iResult = CanHit(target, pLocal, pWeapon, &vPlayerPath, &vProjectilePath, &vBoxes, &flTimeTo);
 		if (!iResult) continue;
@@ -1060,10 +1065,6 @@ bool CAimbotProjectile::RunMain(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUser
 			Aim(pCmd, target.m_vAngleTo);
 			break;
 		}
-
-		G::Target = { target.m_pEntity->entindex(), I::GlobalVars->tickcount };
-		if (Vars::Aimbot::General::AimType.Value == Vars::Aimbot::General::AimTypeEnum::Silent)
-			G::AimPosition = target.m_vPos;
 
 		if (Vars::Aimbot::General::AutoShoot.Value)
 		{
