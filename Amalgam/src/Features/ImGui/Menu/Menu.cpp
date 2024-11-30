@@ -730,13 +730,13 @@ void CMenu::MenuVisuals()
 				} EndSection();
 				if (Section("Simulation"))
 				{
-					FDropdown("Player path", Vars::Visuals::Simulation::PlayerPath, { "Off", "Line", "Separators", "Spaced", "Arrows", "Boxes" }, {}, FDropdown_Left, -20);
+					FDropdown("Player path", Vars::Visuals::Simulation::PlayerPath, { "Off", "Line", "Separators", "Spaced", "Arrow", "Boxes", "ImpactBox", "VelocityPath"}, {}, FDropdown_Left, -20);
 					FColorPicker("Player path", Vars::Colors::PlayerPath, 0, FColorPicker_Dropdown | FColorPicker_Tooltip); FColorPicker("Player path clipped", Vars::Colors::PlayerPathClipped, 0, FColorPicker_Dropdown | FColorPicker_Tooltip);
-					FDropdown("Projectile path", Vars::Visuals::Simulation::ProjectilePath, { "Off", "Line", "Separators", "Spaced", "Arrows", "Boxes" }, {}, FDropdown_Right, -20);
+					FDropdown("Projectile path", Vars::Visuals::Simulation::ProjectilePath, { "Off", "Line", "Separators", "Spaced", "Arrow", "Boxes", "ImpactBox", "VelocityPath"}, {}, FDropdown_Right, -20);
 					FColorPicker("Projectile path", Vars::Colors::ProjectilePath, 0, FColorPicker_Dropdown | FColorPicker_Tooltip); FColorPicker("Projectile path clipped", Vars::Colors::ProjectilePathClipped, 0, FColorPicker_Dropdown | FColorPicker_Tooltip);
-					FDropdown("Trajectory path", Vars::Visuals::Simulation::TrajectoryPath, { "Off", "Line", "Separators", "Spaced", "Arrows", "Boxes" }, {}, FDropdown_Left, -20);
+					FDropdown("Trajectory path", Vars::Visuals::Simulation::TrajectoryPath, { "Off", "Line", "Separators", "Spaced" }, {}, FDropdown_Left, -20);
 					FColorPicker("Trajectory path", Vars::Colors::TrajectoryPath, 0, FColorPicker_Dropdown | FColorPicker_Tooltip); FColorPicker("Trajectory path clipped", Vars::Colors::TrajectoryPathClipped, 0, FColorPicker_Dropdown | FColorPicker_Tooltip);
-					FDropdown("Shot path", Vars::Visuals::Simulation::ShotPath, { "Off", "Line", "Separators", "Spaced", "Arrows", "Boxes" }, {}, FDropdown_Right, -20);
+					FDropdown("Shot path", Vars::Visuals::Simulation::ShotPath, { "Off", "Line", "Separators", "Spaced" }, {}, FDropdown_Right, -20);
 					FColorPicker("Shot path", Vars::Colors::ShotPath, 0, FColorPicker_Dropdown | FColorPicker_Tooltip); FColorPicker("Shot path clipped", Vars::Colors::ShotPathClipped, 0, FColorPicker_Dropdown | FColorPicker_Tooltip);
 					FDropdown("Splash radius", Vars::Visuals::Simulation::SplashRadius, { "Simulation", "##Divider", "Priority", "Enemy", "Team", "Local", "Friends", "##Divider", "Rockets", "Stickies", "Pipes", "Scorch shot", "##Divider", "Trace" }, {}, FDropdown_Multi, -20);
 					FColorPicker("Splash radius", Vars::Colors::SplashRadius, 0, FColorPicker_Dropdown | FColorPicker_Tooltip); FColorPicker("Splash radius clipped", Vars::Colors::SplashRadiusClipped, 0, FColorPicker_Dropdown | FColorPicker_Tooltip);
@@ -916,7 +916,6 @@ void CMenu::MenuVisuals()
 					FDropdown("Indicators", Vars::Menu::Indicators, { "Ticks", "Crit hack", "Spectators", "Ping", "Conditions", "Seed prediction" }, {}, FDropdown_Multi);
 					if (FSlider("Scale", Vars::Menu::Scale, 0.75f, 2.f, 0.25f, "%g", FSlider_Min | FSlider_Precision | FSlider_NoAutoUpdate))
 						H::Fonts.Reload(Vars::Menu::Scale.Map[DEFAULT_BIND]);
-					FToggle("Cheap text", Vars::Menu::CheapText);
 				} EndSection();
 
 				EndTable();
@@ -2336,15 +2335,20 @@ void CMenu::DrawBinds()
 {
 	using namespace ImGui;
 
+	// Exit conditions
 	if (IsOpen ? !FGet(Vars::Menu::ShowBinds) : !Vars::Menu::ShowBinds.Value || I::EngineVGui->IsGameUIVisible() || I::MatSystemSurface->IsCursorVisible())
 		return;
 
+	// Handle draggable window position
 	static DragBox_t old = { -2147483648, -2147483648 };
 	DragBox_t info = IsOpen ? FGet(Vars::Menu::BindsDisplay) : Vars::Menu::BindsDisplay.Value;
 	if (info != old)
 		SetNextWindowPos({ float(info.x), float(info.y) }, ImGuiCond_Always);
 
-	std::vector<std::tuple<bool, const char*, std::string, std::string>> vBinds;
+	// Container for binds data
+	std::vector<std::tuple<bool, const char*, std::string, std::string, std::string>> vBinds;
+
+	// Recursive function to collect binds
 	std::function<void(int)> getBinds = [&](int iParent)
 		{
 			for (auto it = F::Binds.vBinds.begin(); it != F::Binds.vBinds.end(); it++)
@@ -2356,58 +2360,67 @@ void CMenu::DrawBinds()
 
 				if (tBind.Visible)
 				{
-					std::string info; std::string state;
+					// Prepare bind information
+					std::string info;
+					std::string state;
+					std::string status = tBind.Active ? "On" : "Off";
+
 					switch (tBind.Type)
 					{
-					// key
-					case 0:
+					case 0: // Key-based binds
 						switch (tBind.Info)
 						{
-						case 0: { info = "hold"; break; }
-						case 1: { info = "toggle"; break; }
-						case 2: { info = "double"; break; }
+						case 0: { info = "Hold"; break; }
+						case 1: { info = "Toggle"; break; }
+						case 2: { info = "Double"; break; }
 						}
-						state = VK2STR(tBind.Key);
+						state = VK2STR(tBind.Key); // Convert key to string representation
 						break;
-					// class
-					case 1:
-						info = "class";
-						switch (tBind.Info)
-						{
-						case 0: { state = "scout"; break; }
-						case 1: { state = "soldier"; break; }
-						case 2: { state = "pyro"; break; }
-						case 3: { state = "demoman"; break; }
-						case 4: { state = "heavy"; break; }
-						case 5: { state = "engineer"; break; }
-						case 6: { state = "medic"; break; }
-						case 7: { state = "sniper"; break; }
-						case 8: { state = "spy"; break; }
-						}
-						break;
-					// weapon type
-					case 2:
-						info = "weapon";
-						switch (tBind.Info)
-						{
-						case 0: { state = "hitscan"; break; }
-						case 1: { state = "projectile"; break; }
-						case 2: { state = "melee"; break; }
-						}
-					}
-					if (tBind.Not)
-						info = std::format("not {}", info);
 
-					vBinds.push_back({ tBind.Active, tBind.Name.c_str(), info, state });
+					case 1: // Class-based binds
+						info = "Class";
+						switch (tBind.Info)
+						{
+						case 0: { state = "Scout"; break; }
+						case 1: { state = "Soldier"; break; }
+						case 2: { state = "Pyro"; break; }
+						case 3: { state = "Demoman"; break; }
+						case 4: { state = "Heavy"; break; }
+						case 5: { state = "Engineer"; break; }
+						case 6: { state = "Medic"; break; }
+						case 7: { state = "Sniper"; break; }
+						case 8: { state = "Spy"; break; }
+						}
+						break;
+
+					case 2: // Weapon-based binds
+						info = "Weapon";
+						switch (tBind.Info)
+						{
+						case 0: { state = "Hitscan"; break; }
+						case 1: { state = "Projectile"; break; }
+						case 2: { state = "Melee"; break; }
+						}
+						break;
+					}
+
+					if (tBind.Not)
+						info = std::format("Not {}", info);
+
+					// Add bind to the list
+					vBinds.push_back({ tBind.Active, tBind.Name.c_str(), info, state, status });
 				}
 
+				// Handle nested binds
 				if (tBind.Active)
 					getBinds(iBind);
 			}
 		};
 	getBinds(DEFAULT_BIND);
 
-	float flNameWidth = 0, flInfoWidth = 0, flStateWidth = 0;
+	// Calculate column widths for layout
+	float flNameWidth = 0, flInfoWidth = 0, flStateWidth = 0, flStatusWidth = 0;
+
 	if (vBinds.empty())
 	{
 		if (!IsOpen)
@@ -2418,52 +2431,78 @@ void CMenu::DrawBinds()
 	else
 	{
 		PushFont(F::Render.FontSmall);
-		for (auto& [_, sName, sInfo, sState] : vBinds)
+		for (auto& [_, sName, sInfo, sState, sStatus] : vBinds)
 		{
 			flNameWidth = std::max(flNameWidth, FCalcTextSize(sName).x);
 			flInfoWidth = std::max(flInfoWidth, FCalcTextSize(sInfo.c_str()).x);
 			flStateWidth = std::max(flStateWidth, FCalcTextSize(sState.c_str()).x);
+			flStatusWidth = std::max(flStatusWidth, FCalcTextSize(sStatus.c_str()).x);
 		}
 		PopFont();
-		flNameWidth += H::Draw.Scale(9), flInfoWidth += H::Draw.Scale(9), flStateWidth += H::Draw.Scale(9);
+		flNameWidth += H::Draw.Scale(9);
+		flInfoWidth += H::Draw.Scale(9);
+		flStateWidth += H::Draw.Scale(9);
+		flStatusWidth += H::Draw.Scale(15);
 	}
 
-	float flWidth = flNameWidth + flInfoWidth + flStateWidth + H::Draw.Scale(14);
+	// Set window dimensions
+	float flWidth = flInfoWidth + flNameWidth + flStateWidth + flStatusWidth + H::Draw.Scale(16); // Reduced right padding here
 	float flHeight = H::Draw.Scale(18 * vBinds.size() + 40);
+
+	// Configure and render the window
 	SetNextWindowSize({ flWidth, flHeight });
 	PushStyleVar(ImGuiStyleVar_WindowMinSize, { H::Draw.Scale(40), H::Draw.Scale(40) });
 	PushStyleColor(ImGuiCol_WindowBg, F::Render.Background.Value);
+
 	if (Begin("Binds", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize))
 	{
+		// Save window position
 		ImVec2 vWindowPos = GetWindowPos();
+		info.x = vWindowPos.x;
+		info.y = vWindowPos.y;
+		old = info;
 
-		info.x = vWindowPos.x; info.y = vWindowPos.y; old = info;
 		if (IsOpen)
 			FSet(Vars::Menu::BindsDisplay, info);
 
+		// Header
 		PushFont(F::Render.FontLarge);
 		SetCursorPos({ H::Draw.Scale(11), H::Draw.Scale(9) });
 		FText("Binds");
 		PopFont();
 
+		// Header underline
 		GetWindowDrawList()->AddRectFilled({ vWindowPos.x + H::Draw.Scale(8), vWindowPos.y + H::Draw.Scale(26) }, { vWindowPos.x + flWidth - H::Draw.Scale(8), vWindowPos.y + H::Draw.Scale(27) }, F::Render.Accent, H::Draw.Scale(3));
 
+		// Render binds
 		PushFont(F::Render.FontSmall);
-		int i = 0; for (auto& [bActive, sName, sInfo, sState] : vBinds)
+		int i = 0;
+		for (auto& [bActive, sName, sInfo, sState, sStatus] : vBinds)
 		{
 			float flPosX = 0;
 
-			SetCursorPos({ flPosX += H::Draw.Scale(12), H::Draw.Scale(34 + 18 * i) });
+			// Info (Column 2)
+			SetCursorPos({ flPosX += H::Draw.Scale(15), H::Draw.Scale(34 + 18 * i) });
 			PushStyleColor(ImGuiCol_Text, bActive ? F::Render.Accent.Value : F::Render.Inactive.Value);
+			FText(sInfo.c_str());
+			PopStyleColor();
+
+			// Name (Column 1)
+			SetCursorPos({ flPosX += flInfoWidth, H::Draw.Scale(34 + 18 * i) });
+			PushStyleColor(ImGuiCol_Text, bActive ? F::Render.Active.Value : F::Render.Inactive.Value);
 			FText(sName);
 			PopStyleColor();
 
+			// State (Column 3)
 			SetCursorPos({ flPosX += flNameWidth, H::Draw.Scale(34 + 18 * i) });
-			PushStyleColor(ImGuiCol_Text, bActive ? F::Render.Active.Value : F::Render.Inactive.Value);
-			FText(sInfo.c_str());
-
-			SetCursorPos({ flPosX += flInfoWidth, H::Draw.Scale(34 + 18 * i) });
+			PushStyleColor(ImGuiCol_Text, bActive ? F::Render.Active.Value : F::Render.Inactive.Value); // Ensure inactive color is used when not active
 			FText(sState.c_str());
+			PopStyleColor();
+
+			// Status (Column 4)
+			SetCursorPos({ flPosX += flStateWidth, H::Draw.Scale(34 + 18 * i) });
+			PushStyleColor(ImGuiCol_Text, bActive ? F::Render.Accent.Value : F::Render.Inactive.Value);
+			FText(sStatus.c_str());
 			PopStyleColor();
 
 			i++;

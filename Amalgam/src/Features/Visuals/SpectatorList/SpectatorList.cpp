@@ -90,7 +90,7 @@ void CSpectatorList::Draw(CTFPlayer* pLocal)
 	//if (!Vars::Menu::SpectatorAvatars.Value)
 	//	iconOffset = 0;
 
-	H::Draw.StringOutlined(fFont, x, y, Vars::Menu::Theme::Accent.Value, Vars::Menu::Theme::Background.Value, align, "Spectating You:");
+	H::Draw.String(fFont, x, y, Vars::Menu::Theme::Accent.Value, align, "Spectating You:");
 	for (auto& Spectator : m_vSpectators)
 	{
 		y += nTall;
@@ -124,6 +124,6 @@ void CSpectatorList::Draw(CTFPlayer* pLocal)
 			color = { 255, 100, 100, 255 };
 		else if (FNV1A::Hash32(Spectator.m_sMode.c_str()) == FNV1A::Hash32Const("1st"))
 			color = { 255, 200, 127, 255 };
-		H::Draw.StringOutlined(fFont, x + iconOffset, y, color, Vars::Menu::Theme::Background.Value, align, std::format("{} - {} (respawn {}s)", Spectator.m_sName, Spectator.m_sMode, Spectator.m_iRespawnIn).c_str());
+		H::Draw.String(fFont, x + iconOffset, y, color, align, std::format("{} - {} (respawn {}s)", Spectator.m_sName, Spectator.m_sMode, Spectator.m_iRespawnIn).c_str());
 	}
 }

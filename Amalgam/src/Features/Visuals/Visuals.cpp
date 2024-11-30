@@ -1,5 +1,7 @@
 #include "Visuals.h"
 
+#include <cmath>
+#include <algorithm>
 #include "../Aimbot/Aimbot.h"
 #include "../Visuals/PlayerConditions/PlayerConditions.h"
 #include "../Backtrack/Backtrack.h"
@@ -35,32 +37,58 @@ void CVisuals::DrawFOV(CTFPlayer* pLocal)
 
 void CVisuals::DrawTicks(CTFPlayer* pLocal)
 {
+	// Check if the Ticks indicator is enabled in the menu
 	if (!(Vars::Menu::Indicators.Value & Vars::Menu::IndicatorsEnum::Ticks))
 		return;
 
+	// Check if the player is alive
 	if (!pLocal->IsAlive())
 		return;
 
+	// Get the position and font for drawing
 	const DragBox_t dtPos = Vars::Menu::TicksDisplay.Value;
 	const auto& fFont = H::Fonts.GetFont(FONT_INDICATORS);
 
-	int iTicks = std::clamp(G::ShiftedTicks + G::ChokeAmount, 0, G::MaxShift);
-	float flRatio = float(iTicks) / G::MaxShift;
-	int iSizeX = H::Draw.Scale(100, Scale_Round), iSizeY = H::Draw.Scale(12, Scale_Round);
-	int iPosX = dtPos.x - iSizeX / 2, iPosY = dtPos.y + fFont.m_nTall + H::Draw.Scale(4) + 1;
+	// Calculate the ticks and progress ratio
+	int iTicks = G::ShiftedTicks + G::ChokeAmount;
+	float flRatio = float(std::clamp(iTicks, 0, G::MaxShift)) / G::MaxShift;
 
-	H::Draw.StringOutlined(fFont, dtPos.x, dtPos.y + 2, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOP, std::format("Ticks {} / {}", iTicks, G::MaxShift).c_str());
+	// Adjust the size of the progress bar and background
+	int iSizeX = H::Draw.Scale(100, Scale_Round); // Slightly reduced width of the background
+	int iSizeY = H::Draw.Scale(13, Scale_Round);  // Keep the height as it is
+
+	int iPosX = dtPos.x - iSizeX / 2;             // Center horizontally
+	int iPosY = dtPos.y + fFont.m_nTall + H::Draw.Scale(4); // Adjusted for alignment
+
+	// Corner radius for rounded edges
+	int cornerRadius = H::Draw.Scale(5, Scale_Round);
+
+	// Draw the tick count text
+	H::Draw.String(fFont, dtPos.x, dtPos.y + 2,
+		Vars::Menu::Theme::Active.Value,
+		ALIGN_TOP, std::format("Ticks {} / {}", iTicks, G::MaxShift).c_str());
+
 	if (G::WaitForShift)
-		H::Draw.StringOutlined(fFont, dtPos.x, dtPos.y + fFont.m_nTall + H::Draw.Scale(18, Scale_Round) + 1, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOP, "Not Ready");
-
-	H::Draw.LineRoundRect(iPosX, iPosY, iSizeX, iSizeY, H::Draw.Scale(3, Scale_Round), Vars::Menu::Theme::Accent.Value, 16);
-	if (flRatio)
 	{
-		iSizeX -= H::Draw.Scale(2, Scale_Ceil) * 2, iSizeY -= H::Draw.Scale(2, Scale_Ceil) * 2;
-		iPosX += H::Draw.Scale(2, Scale_Round), iPosY += H::Draw.Scale(2, Scale_Round);
-		H::Draw.StartClipping(iPosX, iPosY, iSizeX * flRatio, iSizeY);
-		H::Draw.FillRoundRect(iPosX, iPosY, iSizeX, iSizeY, H::Draw.Scale(3, Scale_Round), Vars::Menu::Theme::Accent.Value, 16);
-		H::Draw.EndClipping();
+		H::Draw.String(fFont, dtPos.x, dtPos.y + fFont.m_nTall + H::Draw.Scale(18, Scale_Round),
+			Vars::Menu::Theme::Active.Value,
+			ALIGN_TOP, "Not Ready");
+	}
+
+	// Draw the background of the progress bar with rounded corners
+	H::Draw.FillRoundRect(iPosX, iPosY, iSizeX, iSizeY, cornerRadius, Vars::Menu::Theme::Background.Value);
+
+	// Draw the progress bar if the ratio is greater than 0
+	if (flRatio > 0.0f)
+	{
+		// Adjust the size and position for the progress indicator
+		int progressSizeX = iSizeX - 4;  // Slightly smaller width to fit inside the background
+		int progressSizeY = iSizeY - 4;  // Slightly smaller height
+		int progressPosX = iPosX + 2;    // Adjust to center inside the background
+		int progressPosY = iPosY + 2;    // Align vertically inside the background
+
+		// Draw the filled progress bar with rounded corners
+		H::Draw.FillRoundRect(progressPosX, progressPosY, progressSizeX * flRatio, progressSizeY, cornerRadius, Vars::Menu::Theme::Accent.Value);
 	}
 }
 
@@ -104,10 +132,10 @@ void CVisuals::DrawPing(CTFPlayer* pLocal)
 	}
 
 	if (flFake || Vars::Backtrack::Interp.Value && Vars::Backtrack::Enabled.Value)
-		H::Draw.StringOutlined(fFont, x, y, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, align, std::format("Real {:.0f} (+ {:.0f}) ms", flLatency, flFake).c_str());
+		H::Draw.String(fFont, x, y, Vars::Menu::Theme::Active.Value, align, std::format("Real {:.0f} (+ {:.0f}) ms", flLatency, flFake).c_str());
 	else
-		H::Draw.StringOutlined(fFont, x, y, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, align, std::format("Real {:.0f} ms", flLatency).c_str());
-	H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, align, "Scoreboard %d ms", iLatencyScoreboard);
+		H::Draw.String(fFont, x, y, Vars::Menu::Theme::Active.Value, align, std::format("Real {:.0f} ms", flLatency).c_str());
+	H::Draw.String(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, align, "Scoreboard %d ms", iLatencyScoreboard);
 }
 
 static std::deque<Vec3> SplashTrace(Vec3 vOrigin, float flRadius, Vec3 vNormal = { 0, 0, 1 }, bool bTrace = true, int iSegments = 32)
@@ -428,24 +456,24 @@ void CVisuals::DrawDebugInfo(CTFPlayer* pLocal)
 
 		if (pCmd)
 		{
-			H::Draw.StringOutlined(fFont, x, y += nTall, {}, { 0, 0, 0, 255 }, ALIGN_TOPLEFT, std::format("View: ({:.3f}, {:.3f}, {:.3f})", pCmd->viewangles.x, pCmd->viewangles.y, pCmd->viewangles.z).c_str());
-			H::Draw.StringOutlined(fFont, x, y += nTall, {}, { 0, 0, 0, 255 }, ALIGN_TOPLEFT, std::format("Move: ({}, {}, {})", pCmd->forwardmove, pCmd->sidemove, pCmd->upmove).c_str());
-			H::Draw.StringOutlined(fFont, x, y += nTall, {}, { 0, 0, 0, 255 }, ALIGN_TOPLEFT, std::format("Buttons: {}", pCmd->buttons).c_str());
+			H::Draw.String(fFont, x, y += nTall, {}, ALIGN_TOPLEFT, std::format("View: ({:.3f}, {:.3f}, {:.3f})", pCmd->viewangles.x, pCmd->viewangles.y, pCmd->viewangles.z).c_str());
+			H::Draw.String(fFont, x, y += nTall, {}, ALIGN_TOPLEFT, std::format("Move: ({}, {}, {})", pCmd->forwardmove, pCmd->sidemove, pCmd->upmove).c_str());
+			H::Draw.String(fFont, x, y += nTall, {}, ALIGN_TOPLEFT, std::format("Buttons: {}", pCmd->buttons).c_str());
 		}
 		{
 			Vec3 vOrigin = pLocal->m_vecOrigin();
-			H::Draw.StringOutlined(fFont, x, y += nTall, {}, { 0, 0, 0, 255 }, ALIGN_TOPLEFT, std::format("Origin: ({:.3f}, {:.3f}, {:.3f})", vOrigin.x, vOrigin.y, vOrigin.z).c_str());
+			H::Draw.String(fFont, x, y += nTall, {}, ALIGN_TOPLEFT, std::format("Origin: ({:.3f}, {:.3f}, {:.3f})", vOrigin.x, vOrigin.y, vOrigin.z).c_str());
 		}
 		{
 			Vec3 vVelocity = pLocal->m_vecVelocity();
-			H::Draw.StringOutlined(fFont, x, y += nTall, {}, { 0, 0, 0, 255 }, ALIGN_TOPLEFT, std::format("Velocity: {:.3f} ({:.3f}, {:.3f}, {:.3f})", vVelocity.Length(), vVelocity.x, vVelocity.y, vVelocity.z).c_str());
+			H::Draw.String(fFont, x, y += nTall, {}, ALIGN_TOPLEFT, std::format("Velocity: {:.3f} ({:.3f}, {:.3f}, {:.3f})", vVelocity.Length(), vVelocity.x, vVelocity.y, vVelocity.z).c_str());
 		}
-		H::Draw.StringOutlined(fFont, x, y += nTall, {}, { 0, 0, 0, 255 }, ALIGN_TOPLEFT, std::format("Choke: {}, {}", G::Choking, I::ClientState->chokedcommands).c_str());
-		H::Draw.StringOutlined(fFont, x, y += nTall, {}, { 0, 0, 0, 255 }, ALIGN_TOPLEFT, std::format("Ticks: {}, {}", G::ShiftedTicks, G::ShiftedGoal).c_str());
-		H::Draw.StringOutlined(fFont, x, y += nTall, {}, { 0, 0, 0, 255 }, ALIGN_TOPLEFT, std::format("Round state: {}", SDK::GetRoundState()).c_str());
-		H::Draw.StringOutlined(fFont, x, y += nTall, {}, { 0, 0, 0, 255 }, ALIGN_TOPLEFT, std::format("Tickcount: {}", pLocal->m_nTickBase()).c_str());
-		H::Draw.StringOutlined(fFont, x, y += nTall, {}, { 0, 0, 0, 255 }, ALIGN_TOPLEFT, std::format("Entities: {} ({}, {})", I::ClientEntityList->GetMaxEntities(), I::ClientEntityList->GetHighestEntityIndex(), I::ClientEntityList->NumberOfEntities(false)).c_str());
-	
+		H::Draw.String(fFont, x, y += nTall, {}, ALIGN_TOPLEFT, std::format("Choke: {}, {}", G::Choking, I::ClientState->chokedcommands).c_str());
+		H::Draw.String(fFont, x, y += nTall, {}, ALIGN_TOPLEFT, std::format("Ticks: {}, {}", G::ShiftedTicks, G::ShiftedGoal).c_str());
+		H::Draw.String(fFont, x, y += nTall, {}, ALIGN_TOPLEFT, std::format("Round state: {}", SDK::GetRoundState()).c_str());
+		H::Draw.String(fFont, x, y += nTall, {}, ALIGN_TOPLEFT, std::format("Tickcount: {}", pLocal->m_nTickBase()).c_str());
+		H::Draw.String(fFont, x, y += nTall, {}, ALIGN_TOPLEFT, std::format("Entities: {} ({}, {})", I::ClientEntityList->GetMaxEntities(), I::ClientEntityList->GetHighestEntityIndex(), I::ClientEntityList->NumberOfEntities(false)).c_str());
+
 		if (!pWeapon || !pCmd)
 			return;
 
@@ -454,11 +482,11 @@ void CVisuals::DrawDebugInfo(CTFPlayer* pLocal)
 		float flSecondaryAttack = pWeapon->m_flNextSecondaryAttack();
 		float flAttack = pLocal->m_flNextAttack();
 
-		H::Draw.StringOutlined(fFont, x, y += nTall * 2, {}, { 0, 0, 0, 255 }, ALIGN_TOPLEFT, std::format("Attacking: {} ({})", G::Attacking, bool(pCmd->buttons & IN_ATTACK)).c_str());
-		H::Draw.StringOutlined(fFont, x, y += nTall, {}, { 0, 0, 0, 255 }, ALIGN_TOPLEFT, std::format("CanPrimaryAttack: {} ([{:.3f} | {:.3f}] <= {:.3f})", G::CanPrimaryAttack, flPrimaryAttack, flAttack, flTime).c_str());
-		H::Draw.StringOutlined(fFont, x, y += nTall, {}, { 0, 0, 0, 255 }, ALIGN_TOPLEFT, std::format("CanSecondaryAttack: {} ([{:.3f} | {:.3f}] <= {:.3f})", G::CanSecondaryAttack, flSecondaryAttack, flAttack, flTime).c_str());
-		H::Draw.StringOutlined(fFont, x, y += nTall, {}, { 0, 0, 0, 255 }, ALIGN_TOPLEFT, std::format("Attack: {:.3f}, {:.3f}; {:.3f}", flTime - flPrimaryAttack, flTime - flSecondaryAttack, flTime - flAttack).c_str());
-		H::Draw.StringOutlined(fFont, x, y += nTall, {}, { 0, 0, 0, 255 }, ALIGN_TOPLEFT, std::format("Reload: {} ({} || {} != 0)", G::Reloading, pWeapon->m_bInReload(), pWeapon->m_iReloadMode()).c_str());
+		H::Draw.String(fFont, x, y += nTall * 2, {}, ALIGN_TOPLEFT, std::format("Attacking: {} ({})", G::Attacking, bool(pCmd->buttons & IN_ATTACK)).c_str());
+		H::Draw.String(fFont, x, y += nTall, {}, ALIGN_TOPLEFT, std::format("CanPrimaryAttack: {} ([{:.3f} | {:.3f}] <= {:.3f})", G::CanPrimaryAttack, flPrimaryAttack, flAttack, flTime).c_str());
+		H::Draw.String(fFont, x, y += nTall, {}, ALIGN_TOPLEFT, std::format("CanSecondaryAttack: {} ([{:.3f} | {:.3f}] <= {:.3f})", G::CanSecondaryAttack, flSecondaryAttack, flAttack, flTime).c_str());
+		H::Draw.String(fFont, x, y += nTall, {}, ALIGN_TOPLEFT, std::format("Attack: {:.3f}, {:.3f}; {:.3f}", flTime - flPrimaryAttack, flTime - flSecondaryAttack, flTime - flAttack).c_str());
+		H::Draw.String(fFont, x, y += nTall, {}, ALIGN_TOPLEFT, std::format("Reload: {} ({} || {} != 0)", G::Reloading, pWeapon->m_bInReload(), pWeapon->m_iReloadMode()).c_str());
 	}
 }
 
@@ -503,10 +531,73 @@ std::vector<DrawBox> CVisuals::GetHitboxes(matrix3x4 aBones[MAXSTUDIOBONES], CBa
 	return vBoxes;
 }
 
-void CVisuals::DrawPath(std::deque<Vec3>& Line, Color_t Color, int iStyle, bool bZBuffer, float flTime)
-{
-	if (iStyle == Vars::Visuals::Simulation::StyleEnum::Off)
-		return;
+// Helper function to convert HSV to RGB color
+Color_t ColorFromHSV(float hue, float saturation, float value) {
+	int h = static_cast<int>(hue / 60) % 6;
+	float f = hue / 60 - h;
+	float p = value * (1 - saturation);
+	float q = value * (1 - f * saturation);
+	float t = value * (1 - (1 - f) * saturation);
+
+	float r, g, b;
+	switch (h) {
+	case 0: r = value; g = t; b = p; break;
+	case 1: r = q; g = value; b = p; break;
+	case 2: r = p; g = value; b = t; break;
+	case 3: r = p; g = q; b = value; break;
+	case 4: r = t; g = p; b = value; break;
+	case 5: r = value; g = p; b = q; break;
+	}
+	return Color_t(static_cast<int>(r * 255), static_cast<int>(g * 255), static_cast<int>(b * 255), 255);
+}
+
+// Function to manually normalize a vector
+Vec3 Normalize(const Vec3& vec) {
+	float length = sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
+	if (length == 0) return Vec3(0, 0, 0); // Avoid division by zero
+	return Vec3(vec.x / length, vec.y / length, vec.z / length);
+}
+
+void CVisuals::DrawPath(std::deque<Vec3>& Line, Color_t Color, int iStyle, bool bZBuffer, float flTime) {
+	if (iStyle == Vars::Visuals::Simulation::StyleEnum::Off || Line.size() < 2) {
+		return;  // Early exit if no valid style is selected or not enough points
+	}
+
+	if (iStyle == Vars::Visuals::Simulation::StyleEnum::VelocityPath) {
+		// Velocity-based coloring for the Separators style
+		for (size_t i = 1; i < Line.size(); ++i) {
+			Vec3 velocity = Line[i] - Line[i - 1];
+			float speed = sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+
+			// Map speed to color: red (0.0) to green (120.0)
+			float hue = (speed >= 3.0f) ? 120.0f : (speed <= 0.0f) ? 0.0f : speed * 40.0f;
+			Color_t speedColor = ColorFromHSV(hue, 1.0f, 1.0f);
+
+			// Draw the line segment with speed-based color
+			RenderLine(Line[i - 1], Line[i], speedColor, bZBuffer);
+
+			float minSize = 0.0f;
+			float maxSize = 9.0f;
+			float separatorSize = ((speed / 6.0f) * (maxSize - minSize)) + minSize;
+			separatorSize = fmin(separatorSize, maxSize + 2.0f);
+
+			if (i % 4 == 0 && separatorSize > 0.0f) {
+				Vec3 vSeparator = velocity;
+				vSeparator.z = 0;
+				vSeparator = Normalize(vSeparator);
+				vSeparator = Math::RotatePoint(vSeparator * separatorSize, {}, { 0, 90, 0 });
+				RenderLine(Line[i], Line[i] + vSeparator, speedColor, bZBuffer);
+			}
+
+			if (i % 4 == 0 && separatorSize > 0.0f) {
+				Vec3 vAdditionalSeparator = velocity;
+				vAdditionalSeparator.z = 0;
+				vAdditionalSeparator = Normalize(vAdditionalSeparator);
+				vAdditionalSeparator = Math::RotatePoint(vAdditionalSeparator * (separatorSize + 1.0f), {}, { 0, 90, 0 });
+				RenderLine(Line[i], Line[i] + vAdditionalSeparator, speedColor, bZBuffer);
+			}
+		}
+	}
 
 	for (size_t i = 1; i < Line.size(); i++)
 	{
@@ -528,21 +619,22 @@ void CVisuals::DrawPath(std::deque<Vec3>& Line, Color_t Color, int iStyle, bool 
 				Vec3& vStart = Line[i - 1];
 				Vec3& vEnd = Line[i];
 
-				Vec3 vDir = vEnd - vStart;
-				vDir.z = 0;
-				vDir.Normalize();
-				vDir = Math::RotatePoint(vDir * Vars::Visuals::Simulation::SeparatorLength.Value, {}, { 0, 90, 0 });
-				RenderLine(vEnd, vEnd + vDir, Color, bZBuffer);
+				Vec3 vSeparator = vEnd - vStart;
+				vSeparator.z = 0;
+				vSeparator.Normalize();
+				vSeparator = Math::RotatePoint(vSeparator * Vars::Visuals::Simulation::SeparatorLength.Value, {}, { 0, 90, 0 });
+				RenderLine(vEnd, vEnd + vSeparator, Color, bZBuffer);
 			}
 			break;
 		}
+
 		case Vars::Visuals::Simulation::StyleEnum::Spaced:
 		{
 			if (!(i % 2))
 				RenderLine(Line[i - 1], Line[i], Color, bZBuffer);
 			break;
 		}
-		case Vars::Visuals::Simulation::StyleEnum::Arrows:
+		case Vars::Visuals::Simulation::StyleEnum::Arrow:
 		{
 			if (!(i % 3))
 			{
@@ -551,23 +643,116 @@ void CVisuals::DrawPath(std::deque<Vec3>& Line, Color_t Color, int iStyle, bool 
 
 				if (!(vStart - vEnd).IsZero())
 				{
-					Vec3 vAngles; Math::VectorAngles(vEnd - vStart, vAngles);
-					Vec3 vForward, vRight, vUp; Math::AngleVectors(vAngles, &vForward, &vRight, &vUp);
-					RenderLine(vEnd, vEnd - vForward * 5 + vRight * 5, Color, bZBuffer);
-					RenderLine(vEnd, vEnd - vForward * 5 - vRight * 5, Color, bZBuffer);
-					// this also looked interesting but i'm not sure i'd actually add it
-					//RenderLine(vEnd, vEnd + vForward * 5, Color, bZBuffer);
-					//RenderLine(vEnd, vEnd + vRight * 5, Color, bZBuffer);
-					//RenderLine(vEnd, vEnd + vUp * 5, Color, bZBuffer);
+					// Calculate velocity magnitude
+					float velocity = (vEnd - vStart).Length();
+
+					// Debug: Log velocity
+					printf("Velocity: %f\n", velocity);
+
+					// Define minimum and maximum arrow sizes
+					float minSize = 3.0f;  // Smallest arrow size
+					float maxSize = 10.0f; // Largest arrow size
+
+					// Adjust scaling factor for better visibility during testing
+					float scalingFactor = 0.5f; // Increase this if arrows don't change size noticeably
+
+					// Map velocity to a size range
+					float arrowSize = std::clamp(minSize + (velocity * scalingFactor), minSize, maxSize);
+
+					// Debug: Log arrow size
+					printf("Arrow size: %f\n", arrowSize);
+
+					// Calculate arrow direction vectors
+					Vec3 vAngles;
+					Math::VectorAngles(vEnd - vStart, vAngles);
+					Vec3 vForward, vRight, vUp;
+					Math::AngleVectors(vAngles, &vForward, &vRight, &vUp);
+
+					// Draw the arrow
+					RenderLine(vEnd, vEnd - vForward * arrowSize + vRight * arrowSize, Color, bZBuffer);
+					RenderLine(vEnd, vEnd - vForward * arrowSize - vRight * arrowSize, Color, bZBuffer);
 				}
 			}
 			break;
 		}
+
 		case Vars::Visuals::Simulation::StyleEnum::Boxes:
 		{
 			RenderLine(Line[i - 1], Line[i], Color, bZBuffer);
 			if (!(i % Vars::Visuals::Simulation::SeparatorSpacing.Value))
-				RenderBox(Line[i], { -1, -1, -1 }, { 1, 1, 1 }, {}, Color, { 0, 0, 0, 0 }, bZBuffer);
+			{
+				Vec3 vCenter = Line[i];
+				float boxSize = 1.0f;
+
+				Vec3 vOffsets[] = {
+					{ -boxSize, -boxSize, -boxSize },
+					{  boxSize, -boxSize, -boxSize },
+					{ -boxSize,  boxSize, -boxSize },
+					{  boxSize,  boxSize, -boxSize },
+					{ -boxSize, -boxSize,  boxSize },
+					{  boxSize, -boxSize,  boxSize },
+					{ -boxSize,  boxSize,  boxSize },
+					{  boxSize,  boxSize,  boxSize }
+				};
+
+				RenderLine(vCenter + vOffsets[0], vCenter + vOffsets[1], Color, bZBuffer);
+				RenderLine(vCenter + vOffsets[1], vCenter + vOffsets[3], Color, bZBuffer);
+				RenderLine(vCenter + vOffsets[3], vCenter + vOffsets[2], Color, bZBuffer);
+				RenderLine(vCenter + vOffsets[2], vCenter + vOffsets[0], Color, bZBuffer);
+
+				RenderLine(vCenter + vOffsets[4], vCenter + vOffsets[5], Color, bZBuffer);
+				RenderLine(vCenter + vOffsets[5], vCenter + vOffsets[7], Color, bZBuffer);
+				RenderLine(vCenter + vOffsets[7], vCenter + vOffsets[6], Color, bZBuffer);
+				RenderLine(vCenter + vOffsets[6], vCenter + vOffsets[4], Color, bZBuffer);
+
+				RenderLine(vCenter + vOffsets[0], vCenter + vOffsets[4], Color, bZBuffer);
+				RenderLine(vCenter + vOffsets[1], vCenter + vOffsets[5], Color, bZBuffer);
+				RenderLine(vCenter + vOffsets[2], vCenter + vOffsets[6], Color, bZBuffer);
+				RenderLine(vCenter + vOffsets[3], vCenter + vOffsets[7], Color, bZBuffer);
+			}
+			break;
+		}
+		case Vars::Visuals::Simulation::StyleEnum::ImpactBox:
+		{
+			// Draw the line between all points
+			RenderLine(Line[i - 1], Line[i], Color, bZBuffer);
+
+			// Draw a green 3D box at the last point
+			if (i == Line.size() - 1) // Check if it's the last point
+			{
+				Vec3 vCenter = Line[i];
+				float boxSize = 2.0f; // Size of the box
+
+				// Define green color for the impact box
+				Color_t Green = { 0, 255, 0, 255 }; // RGBA for green
+
+				Vec3 vOffsets[] = {
+					{ -boxSize, -boxSize, -boxSize },
+					{  boxSize, -boxSize, -boxSize },
+					{ -boxSize,  boxSize, -boxSize },
+					{  boxSize,  boxSize, -boxSize },
+					{ -boxSize, -boxSize,  boxSize },
+					{  boxSize, -boxSize,  boxSize },
+					{ -boxSize,  boxSize,  boxSize },
+					{  boxSize,  boxSize,  boxSize }
+				};
+
+				// Draw edges of the 3D box in green
+				RenderLine(vCenter + vOffsets[0], vCenter + vOffsets[1], Green, bZBuffer);
+				RenderLine(vCenter + vOffsets[1], vCenter + vOffsets[3], Green, bZBuffer);
+				RenderLine(vCenter + vOffsets[3], vCenter + vOffsets[2], Green, bZBuffer);
+				RenderLine(vCenter + vOffsets[2], vCenter + vOffsets[0], Green, bZBuffer);
+
+				RenderLine(vCenter + vOffsets[4], vCenter + vOffsets[5], Green, bZBuffer);
+				RenderLine(vCenter + vOffsets[5], vCenter + vOffsets[7], Green, bZBuffer);
+				RenderLine(vCenter + vOffsets[7], vCenter + vOffsets[6], Green, bZBuffer);
+				RenderLine(vCenter + vOffsets[6], vCenter + vOffsets[4], Green, bZBuffer);
+
+				RenderLine(vCenter + vOffsets[0], vCenter + vOffsets[4], Green, bZBuffer);
+				RenderLine(vCenter + vOffsets[1], vCenter + vOffsets[5], Green, bZBuffer);
+				RenderLine(vCenter + vOffsets[2], vCenter + vOffsets[6], Green, bZBuffer);
+				RenderLine(vCenter + vOffsets[3], vCenter + vOffsets[7], Green, bZBuffer);
+			}
 			break;
 		}
 		}
@@ -774,7 +959,7 @@ void CVisuals::DrawPickupTimers()
 		{
 			auto sText = std::format("{:.1f}s", 10.f - flTime);
 			auto tColor = tPickup.Type ? Vars::Colors::Health.Value : Vars::Colors::Ammo.Value;
-			H::Draw.StringOutlined(H::Fonts.GetFont(FONT_ESP), vScreen.x, vScreen.y, tColor, Vars::Menu::Theme::Background.Value, ALIGN_CENTER, sText.c_str());
+			H::Draw.String(H::Fonts.GetFont(FONT_ESP), vScreen.x, vScreen.y, tColor, ALIGN_CENTER, sText.c_str());
 		}
 
 		it++;

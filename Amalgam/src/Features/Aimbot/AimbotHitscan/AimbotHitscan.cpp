@@ -634,7 +634,7 @@ void CAimbotHitscan::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pC
 
 	if ((Vars::Aimbot::General::AimHoldsFire.Value == Vars::Aimbot::General::AimHoldsFireEnum::Always || Vars::Aimbot::General::AimHoldsFire.Value == 1 && nWeaponID == TF_WEAPON_MINIGUN) && !G::CanPrimaryAttack && G::LastUserCmd->buttons & IN_ATTACK && Vars::Aimbot::General::AimType.Value && !pWeapon->IsInReload())
 		pCmd->buttons |= IN_ATTACK;
-	if (!Vars::Aimbot::General::AimType.Value || !G::CanPrimaryAttack && !G::Reloading && !G::DoubleTap && Vars::Aimbot::General::AimType.Value == 3 && (nWeaponID == TF_WEAPON_MINIGUN ? pWeapon->As<CTFMinigun>()->m_iWeaponState() == AC_STATE_FIRING || pWeapon->As<CTFMinigun>()->m_iWeaponState() == AC_STATE_SPINNING : true))
+	if (!Vars::Aimbot::General::AimType.Value)
 		return;
 
 	switch (nWeaponID)
@@ -687,8 +687,8 @@ void CAimbotHitscan::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pC
 			return;
 		}
 
-		G::Target = { target.m_pEntity->entindex( ), I::GlobalVars->tickcount };
-		if ( Vars::Aimbot::General::AimType.Value == Vars::Aimbot::General::AimTypeEnum::Silent )
+		G::Target = { target.m_pEntity->entindex(), I::GlobalVars->tickcount };
+		if (Vars::Aimbot::General::AimType.Value == Vars::Aimbot::General::AimTypeEnum::Silent)
 			G::AimPosition = target.m_vPos;
 
 		const auto iResult = CanHit(target, pLocal, pWeapon);
@@ -698,6 +698,7 @@ void CAimbotHitscan::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pC
 			Aim(pCmd, target.m_vAngleTo);
 			break;
 		}
+
 
 		bool bShouldFire = ShouldFire(pLocal, pWeapon, pCmd, target);
 

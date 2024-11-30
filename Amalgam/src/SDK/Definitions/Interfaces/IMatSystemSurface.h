@@ -45,12 +45,12 @@ public:
 
 	void StartDrawing()
 	{
-		S::CMatSystemSurface_StartDrawing.Call<void>(this);
+		S::CMatSystemSurface_StartDrawing.As<void(__fastcall*)(void*)>()(this);
 	}
 
 	void FinishDrawing()
 	{
-		S::CMatSystemSurface_FinishDrawing.Call<void>(this);
+		S::CMatSystemSurface_FinishDrawing.As<void(__fastcall*)(void*)>()(this);
 	}
 };
 

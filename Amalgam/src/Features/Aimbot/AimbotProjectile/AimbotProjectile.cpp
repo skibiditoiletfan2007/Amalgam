@@ -901,7 +901,7 @@ int CAimbotProjectile::CanHit(Target_t& target, CTFPlayer* pLocal, CTFWeaponBase
 
 	const float flTime = TICKS_TO_TIME(pProjectilePath->size());
 	target.m_vPos = vTarget;
-	
+
 
 	if (iLowestPriority != std::numeric_limits<int>::max() &&
 		(target.m_TargetType == ETargetType::Player ? !storage.m_bFailed : true)) // don't attempt to aim at players when movesim fails
@@ -1055,7 +1055,7 @@ bool CAimbotProjectile::RunMain(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUser
 #endif
 	for (auto& target : targets)
 	{
-		G::Target = { target.m_pEntity->entindex( ), I::GlobalVars->tickcount };
+		G::Target = { target.m_pEntity->entindex(), I::GlobalVars->tickcount };
 
 		float flTimeTo = 0.f; std::deque<Vec3> vPlayerPath, vProjectilePath; std::vector<DrawBox> vBoxes = {};
 		const int iResult = CanHit(target, pLocal, pWeapon, &vPlayerPath, &vProjectilePath, &vBoxes, &flTimeTo);
@@ -1066,6 +1066,7 @@ bool CAimbotProjectile::RunMain(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUser
 			break;
 		}
 
+		
 		if (Vars::Aimbot::General::AutoShoot.Value)
 		{
 			pCmd->buttons |= IN_ATTACK;

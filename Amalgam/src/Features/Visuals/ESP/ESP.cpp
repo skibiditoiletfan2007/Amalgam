@@ -80,7 +80,7 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 			if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Priority)
 			{
 				if (auto pTag = F::PlayerUtils.GetSignificantTag(pi.friendsID, 1)) // 50 alpha as white outline tends to be more apparent
-					tCache.m_vText.push_back({ TextTop, pTag->Name, pTag->Color, H::Draw.IsColorDark(pTag->Color) ? Color_t(255, 255, 255, 50) : Color_t(0, 0, 0, 255) });
+					tCache.m_vText.push_back({ TextTop, pTag->Name, pTag->Color, H::Draw.IsColorDark(pTag->Color) ? Color_t(255, 255, 255, 255) : Color_t(0, 0, 0, 255) });
 			}
 
 			if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Labels)
@@ -111,7 +111,7 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 						});
 
 					for (auto& pTag : vTags) // 50 alpha as white outline tends to be more apparent
-						tCache.m_vText.push_back({ TextRight, pTag->Name, pTag->Color, H::Draw.IsColorDark(pTag->Color) ? Color_t(255, 255, 255, 50) : Color_t(0, 0, 0, 255) });
+						tCache.m_vText.push_back({ TextRight, pTag->Name, pTag->Color, H::Draw.IsColorDark(pTag->Color) ? Color_t(255, 255, 255, 255) : Color_t(0, 0, 0, 255) });
 				}
 			}
 		}
@@ -121,14 +121,24 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 		{
 			if (flHealth > flMaxHealth)
 			{
+				// Calculate max overheal and set tCache.m_flHealth
 				float flMaxOverheal = floorf(flMaxHealth / 10.f) * 5;
 				tCache.m_flHealth = 1.f + std::clamp((flHealth - flMaxHealth) / flMaxOverheal, 0.f, 1.f);
 			}
 			else
+			{
 				tCache.m_flHealth = std::clamp(flHealth / flMaxHealth, 0.f, 1.f);
+			}
 		}
+
 		if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::HealthText)
-			tCache.m_vText.push_back({ TextHealth, std::format("{}", flHealth), flHealth > flMaxHealth ? Vars::Colors::Overheal.Value : Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+		{
+			// Set the health text color to white if overhealed
+			Color_t healthColor = flHealth > flMaxHealth ? Color_t(255, 255, 255, 255) : Vars::Menu::Theme::Active.Value;
+
+			// Add the health text to the cache with the selected color
+			tCache.m_vText.push_back({ TextHealth, std::format("{}", flHealth), healthColor, Vars::Menu::Theme::Background.Value });
+		}
 
 		if (iClassNum == TF_CLASS_MEDIC)
 		{
@@ -185,14 +195,14 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 		{
 			int iAverage = TIME_TO_TICKS(F::MoveSim.GetPredictedDelta(pPlayer));
 			int iCurrent = H::Entities.GetChoke(pPlayer->entindex());
-			tCache.m_vText.push_back({ TextRight, std::format("Lag {}, {}", iAverage, iCurrent), {}, { 0, 0, 0, 255 } });
+			tCache.m_vText.push_back({ TextRight, std::format("Lag {}, {}", iAverage, iCurrent), {}, { 255, 255, 255, 255 } });
 		}
 
 		{
 			if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::LagCompensation && !pPlayer->IsDormant() && pPlayer != pLocal)
 			{
 				if (H::Entities.GetLagCompensation(pPlayer->entindex()))
-					tCache.m_vText.push_back({ TextRight, "LAGCOMP", { 255, 100, 100, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "LAGCOMP", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 			}
 
 			if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Ping && pResource && pPlayer != pLocal)
@@ -202,7 +212,7 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 				{
 					int iPing = pResource->GetPing(pPlayer->entindex());
 					if (iPing && (iPing >= 200 || iPing <= 5))
-						tCache.m_vText.push_back({ TextRight, std::format("{}MS", iPing), { 255, 100, 100, 255 }, { 0, 0, 0, 255 } });
+						tCache.m_vText.push_back({ TextRight, std::format("{}MS", iPing), { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 				}
 			}
 
@@ -213,7 +223,7 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 				{
 					int iKDR = iKills / std::max(iDeaths, 1);
 					if (iKDR >= 10)
-						tCache.m_vText.push_back({ TextRight, std::format("High KD [{} / {}]", iKills, iDeaths), { 255, 100, 100, 255 }, { 0, 0, 0, 255 } });
+						tCache.m_vText.push_back({ TextRight, std::format("High KD [{} / {}]", iKills, iDeaths), { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 				}
 			}
 
@@ -227,9 +237,9 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 					pWeapon && pWeapon->m_iItemDefinitionIndex() == Sniper_t_TheBushwacka ? bCrits = true : bMiniCrits = true;
 
 				if (bCrits)
-					tCache.m_vText.push_back({ TextRight, "CRITS", { 255, 100, 100, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "CRITS", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 				else if (bMiniCrits)
-					tCache.m_vText.push_back({ TextRight, "MINI-CRITS", { 255, 175, 0, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "MINI-CRITS", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 
 				if (pPlayer->InCond(TF_COND_RADIUSHEAL) ||
 					pPlayer->InCond(TF_COND_HEALTH_BUFF) ||
@@ -238,94 +248,94 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 					pPlayer->InCond(TF_COND_HALLOWEEN_QUICK_HEAL) ||
 					pPlayer->InCond(TF_COND_HALLOWEEN_HELL_HEAL) ||
 					pPlayer->IsBuffedByKing())
-					tCache.m_vText.push_back({ TextRight, "HP+", Vars::Colors::Overheal.Value, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "HP+", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 				else if (pPlayer->InCond(TF_COND_HEALTH_OVERHEALED))
-					tCache.m_vText.push_back({ TextRight, "HP", Vars::Colors::Overheal.Value, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "HP", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 
 				if (pPlayer->InCond(TF_COND_INVULNERABLE) ||
 					pPlayer->InCond(TF_COND_INVULNERABLE_HIDE_UNLESS_DAMAGED) ||
 					pPlayer->InCond(TF_COND_INVULNERABLE_USER_BUFF) ||
 					pPlayer->InCond(TF_COND_INVULNERABLE_CARD_EFFECT))
-					tCache.m_vText.push_back({ TextRight, "UBER", Vars::Colors::UberBar.Value, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "UBER", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 				else if (pPlayer->InCond(TF_COND_PHASE))
-					tCache.m_vText.push_back({ TextRight, "BONK", { 255, 175, 0, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "BONK", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 
 				/* vaccinator effects */
 				if (pPlayer->InCond(TF_COND_MEDIGUN_UBER_BULLET_RESIST) || pPlayer->InCond(TF_COND_BULLET_IMMUNE))
-					tCache.m_vText.push_back({ TextRight, "BULLET+", { 255, 100, 100, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "BULLET+", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 				else if (pPlayer->InCond(TF_COND_MEDIGUN_SMALL_BULLET_RESIST))
-					tCache.m_vText.push_back({ TextRight, "BULLET", { 255, 100, 100, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "BULLET",{ 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 				if (pPlayer->InCond(TF_COND_MEDIGUN_UBER_BLAST_RESIST) || pPlayer->InCond(TF_COND_BLAST_IMMUNE))
-					tCache.m_vText.push_back({ TextRight, "BLAST+", { 255, 100, 100, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "BLAST+", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 				else if (pPlayer->InCond(TF_COND_MEDIGUN_SMALL_BLAST_RESIST))
-					tCache.m_vText.push_back({ TextRight, "BLAST", { 255, 100, 100, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "BLAST", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 				if (pPlayer->InCond(TF_COND_MEDIGUN_UBER_FIRE_RESIST) || pPlayer->InCond(TF_COND_FIRE_IMMUNE))
-					tCache.m_vText.push_back({ TextRight, "FIRE+", { 255, 100, 100, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "FIRE+",{ 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 				else if (pPlayer->InCond(TF_COND_MEDIGUN_SMALL_FIRE_RESIST))
-					tCache.m_vText.push_back({ TextRight, "FIRE", { 255, 100, 100, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "FIRE", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 
 				if (pPlayer->InCond(TF_COND_OFFENSEBUFF))
-					tCache.m_vText.push_back({ TextRight, "BANNER", tCache.m_tColor, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "BANNER",{ 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 				if (pPlayer->InCond(TF_COND_DEFENSEBUFF))
-					tCache.m_vText.push_back({ TextRight, "BATTALIONS", tCache.m_tColor, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "BATTALIONS",{ 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 				if (pPlayer->InCond(TF_COND_REGENONDAMAGEBUFF))
-					tCache.m_vText.push_back({ TextRight, "CONCH", tCache.m_tColor, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "CONCH",{ 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 
 				if (pPlayer->InCond(TF_COND_BLASTJUMPING))
-					tCache.m_vText.push_back({ TextRight, "BLASTJUMP", { 255, 175, 0, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "BLASTJUMP", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 			}
 
 			// Debuffs
 			if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Debuffs)
 			{
 				if (pPlayer->InCond(TF_COND_STUNNED))
-					tCache.m_vText.push_back({ TextRight, "STUNNED", { 255, 175, 0, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "STUNNED", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 
 				if (pPlayer->InCond(TF_COND_URINE))
-					tCache.m_vText.push_back({ TextRight, "JARATE", { 255, 175, 0, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "JARATE", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 
 				if (pPlayer->InCond(TF_COND_MARKEDFORDEATH) || pPlayer->InCond(TF_COND_MARKEDFORDEATH_SILENT))
-					tCache.m_vText.push_back({ TextRight, "MARKED", { 255, 175, 0, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "MARKED", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 
 				if (pPlayer->InCond(TF_COND_BURNING))
-					tCache.m_vText.push_back({ TextRight, "BURN", { 255, 175, 0, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "BURN", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 
 				if (pPlayer->InCond(TF_COND_MAD_MILK))
-					tCache.m_vText.push_back({ TextRight, "MILK", { 255, 175, 0, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "MILK", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 			}
 
 			// Misc
 			if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Misc)
 			{
 				if (Vars::Visuals::Removals::Taunts.Value && pPlayer->InCond(TF_COND_TAUNTING))
-					tCache.m_vText.push_back({ TextRight, "TAUNT", { 255, 100, 200, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "TAUNT", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 
 				if (pPlayer->m_bFeignDeathReady())
-					tCache.m_vText.push_back({ TextRight, "DR", { 255, 175, 0, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "DR",{ 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 
 				if (pPlayer->InCond(TF_COND_AIMING) && pWeapon)
 				{
 					switch (pWeapon->GetWeaponID())
 					{
 					case TF_WEAPON_MINIGUN:
-						tCache.m_vText.push_back({ TextRight, "REV", { 127, 127, 127, 255 }, { 0, 0, 0, 255 } });
+						tCache.m_vText.push_back({ TextRight, "REV", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 						break;
 					case TF_WEAPON_COMPOUND_BOW:
-						tCache.m_vText.push_back({ TextRight, I::GlobalVars->curtime - pWeapon->As<CTFPipebombLauncher>()->m_flChargeBeginTime() >= 1.f ? "CHARGED" : "CHARGING", { 255, 175, 0, 255 }, { 0, 0, 0, 255 } });
+						tCache.m_vText.push_back({ TextRight, I::GlobalVars->curtime - pWeapon->As<CTFPipebombLauncher>()->m_flChargeBeginTime() >= 1.f ? "CHARGED" : "CHARGING", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 						break;
 					case TF_WEAPON_PARTICLE_CANNON:
-						tCache.m_vText.push_back({ TextRight, "CHARGING", { 255, 175, 0, 255 }, { 0, 0, 0, 255 } });
+						tCache.m_vText.push_back({ TextRight, "CHARGING", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 					}
 				}
 
 				if (pPlayer->InCond(TF_COND_ZOOMED))
-					tCache.m_vText.push_back({ TextRight, "ZOOM", { 255, 175, 0, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "ZOOM", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 
 				if (pPlayer->InCond(TF_COND_STEALTHED) || pPlayer->InCond(TF_COND_STEALTHED_BLINK) || pPlayer->InCond(TF_COND_STEALTHED_USER_BUFF) || pPlayer->InCond(TF_COND_STEALTHED_USER_BUFF_FADING))
-					tCache.m_vText.push_back({ TextRight, std::format("INVIS {:.0f}%%", pPlayer->GetInvisPercentage()), Vars::Colors::Cloak.Value, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, std::format("INVIS {:.0f}%%", pPlayer->GetInvisPercentage()), { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 
 				if (pPlayer->InCond(TF_COND_DISGUISING) || pPlayer->InCond(TF_COND_DISGUISED))
-					tCache.m_vText.push_back({ TextRight, "DISGUISE", { 255, 175, 0, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "DISGUISE", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 			}
 		}
 	}
@@ -405,23 +415,23 @@ void CESP::StoreBuildings(CTFPlayer* pLocal)
 		{
 			float flConstructed = pBuilding->m_flPercentageConstructed();
 			if (flConstructed < 1.f)
-				tCache.m_vText.push_back({ TextRight, std::format("{:.0f}%%", flConstructed * 100.f), { 255, 175, 0, 255 }, { 0, 0, 0, 255 } });
+				tCache.m_vText.push_back({ TextRight, std::format("{:.0f}%%", flConstructed * 100.f), { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 
 			if (pBuilding->IsSentrygun() && pBuilding->As<CObjectSentrygun>()->m_bPlayerControlled())
-				tCache.m_vText.push_back({ TextRight, "WRANGLED", { 255, 100, 100, 255 }, { 0, 0, 0, 255 } });
+				tCache.m_vText.push_back({ TextRight, "WRANGLED", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 
 			if (pBuilding->m_bHasSapper())
-				tCache.m_vText.push_back({ TextRight, "SAPPED", { 255, 175, 0, 255 }, { 0, 0, 0, 255 } });
+				tCache.m_vText.push_back({ TextRight, "SAPPED", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 			else if (pBuilding->m_bDisabled())
-				tCache.m_vText.push_back({ TextRight, "DISABLED", { 255, 175, 0, 255 }, { 0, 0, 0, 255 } });
+				tCache.m_vText.push_back({ TextRight, "DISABLED", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 
 			if (pBuilding->IsSentrygun() && !pBuilding->m_bBuilding())
 			{
 				int iShells, iMaxShells, iRockets, iMaxRockets; pBuilding->As<CObjectSentrygun>()->GetAmmoCount(iShells, iMaxShells, iRockets, iMaxRockets);
 				if (!iShells)
-					tCache.m_vText.push_back({ TextRight, "NO AMMO", { 127, 127, 127, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "NO AMMO", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 				if (!bIsMini && !iRockets)
-					tCache.m_vText.push_back({ TextRight, "NO ROCKETS", { 127, 127, 127, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "NO ROCKETS", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 			}
 		}
 	}
@@ -602,13 +612,13 @@ void CESP::StoreProjectiles(CTFPlayer* pLocal)
 			case ETFClassID::CTFProjectile_ThrowableBrick:
 			case ETFClassID::CTFProjectile_ThrowableRepel:
 				if (pEntity->As<CTFWeaponBaseGrenadeProj>()->m_bCritical())
-					tCache.m_vText.push_back({ TextRight, "CRIT", { 255, 100, 100, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "CRIT", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 				break;
 			case ETFClassID::CTFProjectile_Arrow:
 			case ETFClassID::CTFProjectile_GrapplingHook:
 			case ETFClassID::CTFProjectile_HealingBolt:
 				if (pEntity->As<CTFProjectile_Arrow>()->m_bCritical())
-					tCache.m_vText.push_back({ TextRight, "CRIT", { 255, 100, 100, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "CRIT", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 				break;
 			case ETFClassID::CTFProjectile_Rocket:
 			case ETFClassID::CTFProjectile_BallOfFire:
@@ -618,15 +628,15 @@ void CESP::StoreProjectiles(CTFPlayer* pLocal)
 			case ETFClassID::CTFProjectile_SpellLightningOrb:
 			case ETFClassID::CTFProjectile_SpellKartOrb:
 				if (pEntity->As<CTFProjectile_Rocket>()->m_bCritical())
-					tCache.m_vText.push_back({ TextRight, "CRIT", { 255, 100, 100, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "CRIT", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 				break;
 			case ETFClassID::CTFProjectile_EnergyBall:
 				if (pEntity->As<CTFProjectile_EnergyBall>()->m_bChargedShot())
-					tCache.m_vText.push_back({ TextRight, "CHARGE", { 255, 100, 100, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "CHARGE", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 				break;
 			case ETFClassID::CTFProjectile_Flare:
 				if (pEntity->As<CTFProjectile_Flare>()->m_bCritical())
-					tCache.m_vText.push_back({ TextRight, "CRIT", { 255, 100, 100, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "CRIT", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 				break;
 			}
 		}
@@ -668,20 +678,20 @@ void CESP::StoreObjective(CTFPlayer* pLocal)
 				switch (pIntel->m_nFlagStatus())
 				{
 				case TF_FLAGINFO_HOME:
-					tCache.m_vText.push_back({ TextRight, "HOME", { 255, 175, 0, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "HOME", { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 					break;
 				case TF_FLAGINFO_DROPPED:
-					tCache.m_vText.push_back({ TextRight, "DROPPED", { 255, 175, 0, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, "DROPPED",{ 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 					break;
 				default:
-					tCache.m_vText.push_back({ TextRight, std::format("{}", pIntel->m_nFlagStatus()), { 255, 175, 0, 255 }, { 0, 0, 0, 255 } });
+					tCache.m_vText.push_back({ TextRight, std::format("{}", pIntel->m_nFlagStatus()), { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 				}
 			}
 
 			if (Vars::ESP::Objective.Value & Vars::ESP::ObjectiveEnum::IntelReturnTime && pIntel->m_nFlagStatus() == TF_FLAGINFO_DROPPED)
 			{
 				float flReturnTime = std::max(pIntel->m_flResetTime() - TICKS_TO_TIME(I::ClientState->m_ClockDriftMgr.m_nServerTick), 0.f);
-				tCache.m_vText.push_back({ TextRight, std::format("RETURN {:.1f}S", pIntel->m_flResetTime() - TICKS_TO_TIME(I::ClientState->m_ClockDriftMgr.m_nServerTick)).c_str(), { 255, 175, 0, 255 }, { 0, 0, 0, 255 } });
+				tCache.m_vText.push_back({ TextRight, std::format("RETURN {:.1f}S", pIntel->m_flResetTime() - TICKS_TO_TIME(I::ClientState->m_ClockDriftMgr.m_nServerTick)).c_str(), { 255, 255, 255, 255 }, { 0, 0, 0, 255 } });
 			}
 
 			break;
@@ -832,7 +842,7 @@ void CESP::DrawPlayers()
 		int lOffset = 0, rOffset = 0, bOffset = 0, tOffset = 0;
 
 		I::MatSystemSurface->DrawSetAlphaMultiplier(tCache.m_flAlpha);
-		
+
 		if (tCache.m_bBox)
 			H::Draw.LineRectOutline(x, y, w, h, tCache.m_tColor, { 0, 0, 0, 255 });
 
@@ -851,22 +861,22 @@ void CESP::DrawPlayers()
 			if (tCache.m_flHealth > 1.f)
 			{
 				Color_t cColor = Vars::Colors::HealthBar.Value.EndColor;
-				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, 1.f, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
+				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, 1, h, 1.f, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
 
 				cColor = Vars::Colors::Overheal.Value;
-				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, tCache.m_flHealth - 1.f, cColor, { 0, 0, 0, 0 }, ALIGN_BOTTOM, true);
+				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, 1, h, tCache.m_flHealth - 1.f, cColor, { 0, 0, 0, 0 }, ALIGN_BOTTOM, true);
 			}
 			else
 			{
 				Color_t cColor = Vars::Colors::HealthBar.Value.StartColor.Lerp(Vars::Colors::HealthBar.Value.EndColor, tCache.m_flHealth);
-				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, tCache.m_flHealth, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
+				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, 1, h, tCache.m_flHealth, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
 			}
 			lOffset += H::Draw.Scale(6);
 		}
 
 		if (tCache.m_bUberBar)
 		{
-			H::Draw.FillRectPercent(x, y + h + H::Draw.Scale(4), w, H::Draw.Scale(2, Scale_Round), tCache.m_flUber, Vars::Colors::UberBar.Value);
+			H::Draw.FillRectPercent(x, y + h + H::Draw.Scale(4), w, 1, tCache.m_flUber, Vars::Colors::UberBar.Value);
 			bOffset += H::Draw.Scale(6);
 		}
 
@@ -876,22 +886,22 @@ void CESP::DrawPlayers()
 			switch (iMode)
 			{
 			case TextTop:
-				H::Draw.StringOutlined(fFont, m, t - tOffset, tColor, tOutline, ALIGN_BOTTOM, sText.c_str());
+				H::Draw.String(fFont, m, t - tOffset, tColor, ALIGN_BOTTOM, sText.c_str());
 				tOffset += nTall;
 				break;
 			case TextBottom:
-				H::Draw.StringOutlined(fFont, m, b + bOffset, tColor, tOutline, ALIGN_TOP, sText.c_str());
+				H::Draw.String(fFont, m, b + bOffset, tColor, ALIGN_TOP, sText.c_str());
 				bOffset += nTall;
 				break;
 			case TextRight:
-				H::Draw.StringOutlined(fFont, r, t + iVerticalOffset + rOffset, tColor, tOutline, ALIGN_TOPLEFT, sText.c_str());
+				H::Draw.String(fFont, r, t + iVerticalOffset + rOffset, tColor, ALIGN_TOPLEFT, sText.c_str());
 				rOffset += nTall;
 				break;
 			case TextHealth:
-				H::Draw.StringOutlined(fFont, l - lOffset, t + iVerticalOffset + h - h * std::min(tCache.m_flHealth, 1.f), tColor, tOutline, ALIGN_TOPRIGHT, sText.c_str());
+				H::Draw.String(fFont, l - lOffset, t + iVerticalOffset + h - h * std::min(tCache.m_flHealth, 1.f), tColor, ALIGN_TOPRIGHT, sText.c_str());
 				break;
 			case TextUber:
-				H::Draw.StringOutlined(fFont, r, y + h, tColor, tOutline, ALIGN_TOPLEFT, sText.c_str());
+				H::Draw.String(fFont, r, y + h, tColor, ALIGN_TOPLEFT, sText.c_str());
 			}
 		}
 
@@ -937,7 +947,7 @@ void CESP::DrawBuildings()
 		if (tCache.m_bHealthBar)
 		{
 			Color_t cColor = Vars::Colors::HealthBar.Value.StartColor.Lerp(Vars::Colors::HealthBar.Value.EndColor, tCache.m_flHealth);
-			H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, tCache.m_flHealth, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
+			H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, 1, h, tCache.m_flHealth, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
 			lOffset += H::Draw.Scale(6);
 		}
 
@@ -947,20 +957,16 @@ void CESP::DrawBuildings()
 			switch (iMode)
 			{
 			case TextTop:
-				H::Draw.StringOutlined(fFont, m, t - tOffset, tColor, tOutline, ALIGN_BOTTOM, sText.c_str());
+				H::Draw.String(fFont, m, t - tOffset, tColor, ALIGN_BOTTOM, sText.c_str());
 				tOffset += nTall;
 				break;
 			case TextBottom:
-				H::Draw.StringOutlined(fFont, m, b + bOffset, tColor, tOutline, ALIGN_TOP, sText.c_str());
+				H::Draw.String(fFont, m, b + bOffset, tColor, ALIGN_TOP, sText.c_str());
 				bOffset += nTall;
 				break;
 			case TextRight:
-				H::Draw.StringOutlined(fFont, r, t + iVerticalOffset + rOffset, tColor, tOutline, ALIGN_TOPLEFT, sText.c_str());
+				H::Draw.String(fFont, r, t + iVerticalOffset + rOffset, tColor, ALIGN_TOPLEFT, sText.c_str());
 				rOffset += nTall;
-				break;
-			case TextHealth:
-				H::Draw.StringOutlined(fFont, l - lOffset, t + iVerticalOffset + h - h * std::min(tCache.m_flHealth, 1.f), tColor, tOutline, ALIGN_TOPRIGHT, sText.c_str());
-				break;
 			}
 		}
 	}
@@ -993,15 +999,15 @@ void CESP::DrawWorld()
 			switch (iMode)
 			{
 			case TextTop:
-				H::Draw.StringOutlined(fFont, m, t - tOffset, tColor, tOutline, ALIGN_BOTTOM, sText.c_str());
+				H::Draw.String(fFont, m, t - tOffset, tColor, ALIGN_BOTTOM, sText.c_str());
 				tOffset += nTall;
 				break;
 			case TextBottom:
-				H::Draw.StringOutlined(fFont, m, b + bOffset, tColor, tOutline, ALIGN_TOP, sText.c_str());
+				H::Draw.String(fFont, m, b + bOffset, tColor, ALIGN_TOP, sText.c_str());
 				bOffset += nTall;
 				break;
 			case TextRight:
-				H::Draw.StringOutlined(fFont, r, t + iVerticalOffset + rOffset, tColor, tOutline, ALIGN_TOPLEFT, sText.c_str());
+				H::Draw.String(fFont, r, t + iVerticalOffset + rOffset, tColor, ALIGN_TOPLEFT, sText.c_str());
 				rOffset += nTall;
 			}
 		}

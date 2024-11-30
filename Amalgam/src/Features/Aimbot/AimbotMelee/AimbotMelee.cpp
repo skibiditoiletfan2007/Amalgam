@@ -453,7 +453,7 @@ void CAimbotMelee::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd
 
 	if (Vars::Aimbot::General::AimHoldsFire.Value == Vars::Aimbot::General::AimHoldsFireEnum::Always && !G::CanPrimaryAttack && G::LastUserCmd->buttons & IN_ATTACK && Vars::Aimbot::General::AimType.Value)
 		pCmd->buttons |= IN_ATTACK;
-	if (!Vars::Aimbot::General::AimType.Value || !G::CanPrimaryAttack && pWeapon->m_flSmackTime() < 0.f)
+	if (!Vars::Aimbot::General::AimType.Value)
 		return;
 
 	if (RunSapper(pLocal, pWeapon, pCmd))
@@ -473,8 +473,9 @@ void CAimbotMelee::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd
 
 	for (auto& target : targets)
 	{
-		G::Target = { target.m_pEntity->entindex( ), I::GlobalVars->tickcount };
-		if ( Vars::Aimbot::General::AimType.Value == Vars::Aimbot::General::AimTypeEnum::Silent )
+		G::Target = { target.m_pEntity->entindex(), I::GlobalVars->tickcount };
+
+		if (Vars::Aimbot::General::AimType.Value == Vars::Aimbot::General::AimTypeEnum::Silent)
 			G::AimPosition = target.m_vPos;
 
 		const auto iResult = CanHit(target, pLocal, pWeapon, vEyePos, pRecordMap[target.m_pEntity]);
@@ -484,6 +485,7 @@ void CAimbotMelee::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd
 			Aim(pCmd, target.m_vAngleTo);
 			break;
 		}
+
 
 		if (Vars::Aimbot::General::AutoShoot.Value && pWeapon->m_flSmackTime() < 0.f)
 		{

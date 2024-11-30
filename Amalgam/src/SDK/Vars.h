@@ -3,7 +3,6 @@
 #include <windows.h>
 #include <unordered_map>
 #include <typeinfo>
-
 #define VA_LIST(...) __VA_ARGS__
 
 #define DEFAULT_BIND -1
@@ -155,14 +154,14 @@ namespace Vars
 			CVar(SplashRadius, 90.f)
 			CVar(AutoRelease, 0.f)
 
-			CVar(GroundSamples, 33, NOSAVE) // debug
+			CVar(GroundSamples, 15, NOSAVE) // debug
 			CVar(GroundStraightFuzzyValue, 100.f, NOSAVE) // debug
 			CVar(GroundLowMinimumSamples, 8, NOSAVE) // debug
 			CVar(GroundHighMinimumSamples, 16, NOSAVE) // debug
 			CVar(GroundLowMinimumDistance, 0.f, NOSAVE) // debug
 			CVar(GroundHighMinimumDistance, 2500.f, NOSAVE) // debug
 
-			CVar(AirSamples, 33, NOSAVE) // debug
+			CVar(AirSamples, 15, NOSAVE) // debug
 			CVar(AirStraightFuzzyValue, 10.f, NOSAVE) // debug
 			CVar(AirLowMinimumSamples, 3, NOSAVE) // debug
 			CVar(AirHighMinimumSamples, 3, NOSAVE) // debug
@@ -177,11 +176,11 @@ namespace Vars
 			CVar(TimeOverride, 0.f, NOSAVE) // debug
 			CVar(HuntsmanLerp, 100.f, NOSAVE) // debug
 			CVar(SplashGrates, true, NOSAVE) // debug
-			CVar(SplashRocket, false, NOSAVE) // debug
+			CVar(SplashRocket, true, NOSAVE) // debug
 			CVar(SplashPoints, 100, NOSAVE) // debug
-			CVar(SplashCountDirect, 100, NOSAVE) // debug
-			CVar(SplashCountArc, 5, NOSAVE) // debug
-			CVar(DeltaCount, 5, NOSAVE) // debug
+			CVar(SplashCountDirect, 400, NOSAVE) // debug
+			CVar(SplashCountArc, 100, NOSAVE) // debug
+			CVar(DeltaCount, 100, NOSAVE) // debug
 			CVarEnum(DeltaMode, 0, NOSAVE, Average, Max) // debug
 		SUBNAMESPACE_END(Projectile)
 
@@ -510,7 +509,7 @@ namespace Vars
 		SUBNAMESPACE_END(Bullet)
 
 		SUBNAMESPACE_BEGIN(Simulation)
-			Enum(Style, Off, Line, Separators, Spaced, Arrows, Boxes);
+			Enum(Style, Off, Line, Separators, Spaced, Arrow, Boxes, ImpactBox, VelocityPath);
 			CVar(PlayerPath, 0, VISUAL)
 			CVar(ProjectilePath, 0, VISUAL)
 			CVar(TrajectoryPath, 0, VISUAL)
@@ -521,8 +520,8 @@ namespace Vars
 			CVar(SwingLines, false, VISUAL)
 			CVar(ProjectileCamera, false, VISUAL)
 			CVar(ProjectileWindow, WindowBox_t(), NOBIND)
-			CVar(SeparatorSpacing, 4, NOSAVE) // debug
-			CVar(SeparatorLength, 12, NOSAVE) // debug
+			CVar(SeparatorSpacing, 4) // debug
+			CVar(SeparatorLength, 12) // debug
 		SUBNAMESPACE_END(ProjectileTrajectory)
 
 		SUBNAMESPACE_BEGIN(Trajectory)
