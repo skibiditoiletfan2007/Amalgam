@@ -863,8 +863,6 @@ int CAimbotProjectile::CanHit(Target_t& target, CTFPlayer* pLocal, CTFWeaponBase
 				mDirectPoints.erase(iIndex);
 			if (vPoint.m_Solution.m_iCalculated != 1)
 				continue;
-			if (Vars::Aimbot::General::AimType.Value == Vars::Aimbot::General::AimTypeEnum::Silent)
-				G::AimPosition = vOriginalPoint;
 
 			Vec3 vAngles = Aim(G::CurrentUserCmd->viewangles, { vPoint.m_Solution.m_flPitch, vPoint.m_Solution.m_flYaw, 0.f });
 			std::deque<Vec3> vProjLines;
@@ -1066,7 +1064,10 @@ bool CAimbotProjectile::RunMain(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUser
 			break;
 		}
 
-		
+		G::Target = { target.m_pEntity->entindex(), I::GlobalVars->tickcount };
+		if (Vars::Aimbot::General::AimType.Value == Vars::Aimbot::General::AimTypeEnum::Silent)
+				G::AimPosition = target.m_vPos;
+
 		if (Vars::Aimbot::General::AutoShoot.Value)
 		{
 			pCmd->buttons |= IN_ATTACK;

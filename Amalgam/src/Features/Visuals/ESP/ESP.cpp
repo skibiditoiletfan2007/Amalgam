@@ -861,22 +861,22 @@ void CESP::DrawPlayers()
 			if (tCache.m_flHealth > 1.f)
 			{
 				Color_t cColor = Vars::Colors::HealthBar.Value.EndColor;
-				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, 1, h, 1.f, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
+				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, 1.f, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
 
 				cColor = Vars::Colors::Overheal.Value;
-				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, 1, h, tCache.m_flHealth - 1.f, cColor, { 0, 0, 0, 0 }, ALIGN_BOTTOM, true);
+				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, tCache.m_flHealth - 1.f, cColor, { 0, 0, 0, 0 }, ALIGN_BOTTOM, true);
 			}
 			else
 			{
 				Color_t cColor = Vars::Colors::HealthBar.Value.StartColor.Lerp(Vars::Colors::HealthBar.Value.EndColor, tCache.m_flHealth);
-				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, 1, h, tCache.m_flHealth, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
+				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, tCache.m_flHealth, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
 			}
 			lOffset += H::Draw.Scale(6);
 		}
 
 		if (tCache.m_bUberBar)
 		{
-			H::Draw.FillRectPercent(x, y + h + H::Draw.Scale(4), w, 1, tCache.m_flUber, Vars::Colors::UberBar.Value);
+			H::Draw.FillRectPercent(x, y + h + H::Draw.Scale(4), w, H::Draw.Scale(2, Scale_Round), tCache.m_flUber, Vars::Colors::UberBar.Value);
 			bOffset += H::Draw.Scale(6);
 		}
 
@@ -947,7 +947,7 @@ void CESP::DrawBuildings()
 		if (tCache.m_bHealthBar)
 		{
 			Color_t cColor = Vars::Colors::HealthBar.Value.StartColor.Lerp(Vars::Colors::HealthBar.Value.EndColor, tCache.m_flHealth);
-			H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, 1, h, tCache.m_flHealth, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
+			H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, tCache.m_flHealth, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
 			lOffset += H::Draw.Scale(6);
 		}
 
@@ -957,22 +957,27 @@ void CESP::DrawBuildings()
 			switch (iMode)
 			{
 			case TextTop:
-				H::Draw.String(fFont, m, t - tOffset, tColor, ALIGN_BOTTOM, sText.c_str());
+				H::Draw.StringOutlined(fFont, m, t - tOffset, tColor, tOutline, ALIGN_BOTTOM, sText.c_str());
 				tOffset += nTall;
 				break;
 			case TextBottom:
-				H::Draw.String(fFont, m, b + bOffset, tColor, ALIGN_TOP, sText.c_str());
+				H::Draw.StringOutlined(fFont, m, b + bOffset, tColor, tOutline, ALIGN_TOP, sText.c_str());
 				bOffset += nTall;
 				break;
 			case TextRight:
-				H::Draw.String(fFont, r, t + iVerticalOffset + rOffset, tColor, ALIGN_TOPLEFT, sText.c_str());
+				H::Draw.StringOutlined(fFont, r, t + iVerticalOffset + rOffset, tColor, tOutline, ALIGN_TOPLEFT, sText.c_str());
 				rOffset += nTall;
+				break;
+			case TextHealth:
+				H::Draw.StringOutlined(fFont, l - lOffset, t + iVerticalOffset + h - h * std::min(tCache.m_flHealth, 1.f), tColor, tOutline, ALIGN_TOPRIGHT, sText.c_str());
+				break;
 			}
 		}
 	}
 
 	I::MatSystemSurface->DrawSetAlphaMultiplier(1.f);
 }
+
 
 void CESP::DrawWorld()
 {
