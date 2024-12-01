@@ -95,8 +95,8 @@ void CCore::Unload()
 	Sleep(250);
 		SDK::Output("Core", "U::ConVars.Unload();", {}, false, false, false, true);
 	U::ConVars.Unload();
-		SDK::Output("Core", "F::Materials.UnloadMaterials();", {}, false, false, false, true);
-	F::Materials.UnloadMaterials();
+		//SDK::Output("Core", "F::Materials.UnloadMaterials();", {}, false, false, false, true);
+	//F::Materials.UnloadMaterials();
 
 	SDK::Output("Amalgam", "Unloaded", { 175, 150, 255, 255 }, true, false, false, true);
 }

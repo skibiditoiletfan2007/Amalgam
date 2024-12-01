@@ -35,7 +35,7 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 
 		if (iIndex == I::EngineClient->GetLocalPlayer())
 		{
-			if (!(Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Local) || !I::Input->CAM_IsThirdPerson())
+			if (!(Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Local) || !Vars::Visuals::ThirdPerson::Enabled.Value || !I::Input->CAM_IsThirdPerson( ) )
 				continue;
 		}
 		else
