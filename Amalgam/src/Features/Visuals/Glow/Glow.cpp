@@ -624,49 +624,49 @@ void CGlow::Unload()
 	if (m_pMatGlowColor)
 	{
 		m_pMatGlowColor->DecrementReferenceCount();
-		m_pMatGlowColor->DeleteIfUnreferenced();
-		m_pMatGlowColor = nullptr;
+		/*m_pMatGlowColor->DeleteIfUnreferenced();
+		m_pMatGlowColor = nullptr;*/
 	}
 
 	if (m_pMatBlurX)
 	{
 		m_pMatBlurX->DecrementReferenceCount();
-		m_pMatBlurX->DeleteIfUnreferenced();
-		m_pMatBlurX = nullptr;
+		/*m_pMatBlurX->DeleteIfUnreferenced();
+		m_pMatBlurX = nullptr;*/
 	}
 
 	if (m_pMatBlurY)
 	{
 		m_pMatBlurY->DecrementReferenceCount();
-		m_pMatBlurY->DeleteIfUnreferenced();
-		m_pMatBlurY = nullptr;
+		/*m_pMatBlurY->DeleteIfUnreferenced();
+		m_pMatBlurY = nullptr;*/
 	}
 
 	if (m_pMatHaloAddToScreen)
 	{
 		m_pMatHaloAddToScreen->DecrementReferenceCount();
-		m_pMatHaloAddToScreen->DeleteIfUnreferenced();
-		m_pMatHaloAddToScreen = nullptr;
+		/*m_pMatHaloAddToScreen->DeleteIfUnreferenced();
+		m_pMatHaloAddToScreen = nullptr;*/
 	}
 
 	if (m_pRtFullFrame)
 	{
 		m_pRtFullFrame->DecrementReferenceCount();
-		m_pRtFullFrame->DeleteIfUnreferenced();
-		m_pRtFullFrame = nullptr;
+		/*m_pRtFullFrame->DeleteIfUnreferenced();
+		m_pRtFullFrame = nullptr;*/
 	}
 
 	if (m_pRenderBuffer1)
 	{
 		m_pRenderBuffer1->DecrementReferenceCount();
-		m_pRenderBuffer1->DeleteIfUnreferenced();
-		m_pRenderBuffer1 = nullptr;
+		/*m_pRenderBuffer1->DeleteIfUnreferenced();
+		m_pRenderBuffer1 = nullptr;*/
 	}
 
 	if (m_pRenderBuffer2)
 	{
 		m_pRenderBuffer2->DecrementReferenceCount();
-		m_pRenderBuffer2->DeleteIfUnreferenced();
-		m_pRenderBuffer2 = nullptr;
+		/*m_pRenderBuffer2->DeleteIfUnreferenced();
+		m_pRenderBuffer2 = nullptr;*/
 	}
 }

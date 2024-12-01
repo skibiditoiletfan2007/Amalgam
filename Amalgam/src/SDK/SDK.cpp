@@ -32,8 +32,8 @@ void SDK::Output(const char* cFunction, const char* cLog, Color_t cColor, bool b
 			I::ClientModeShared->m_pChatElement->ChatPrintf(0, std::format("{}[{}]\x1 {}", cColor.ToHex(), cFunction, cLog).c_str());
 		if (bToast)
 			F::Notifications.Add(std::format("[{}] {}", cFunction, cLog));
-		if (bDebug)
-			OutputDebugStringA(std::format("[{}] {}\n", cFunction, cLog).c_str());
+		/*if (bDebug)
+			OutputDebugStringA(std::format("[{}] {}\n", cFunction, cLog).c_str());*/
 	}
 	else
 	{
@@ -43,8 +43,8 @@ void SDK::Output(const char* cFunction, const char* cLog, Color_t cColor, bool b
 			I::ClientModeShared->m_pChatElement->ChatPrintf(0, std::format("{}{}\x1", cColor.ToHex(), cFunction).c_str());
 		if (bToast)
 			F::Notifications.Add(std::format("{}", cFunction));
-		if (bDebug)
-			OutputDebugStringA(std::format("{}\n", cFunction).c_str());
+		/*if (bDebug)
+			OutputDebugStringA(std::format("{}\n", cFunction).c_str());*/
 	}
 }
 

@@ -52,7 +52,7 @@ void CCore::Loop()
 {
 	while (true)
 	{
-		bool bShouldUnload = U::KeyHandler.Down(VK_F11) && SDK::IsGameWindowInFocus() || bUnload;
+		bool bShouldUnload = U::KeyHandler.Down(VK_DELETE) && SDK::IsGameWindowInFocus() || bUnload;
 		if (bShouldUnload)
 			break;
 

@@ -77,15 +77,19 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 			if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Name)
 				tCache.m_vText.push_back({ TextTop, F::PlayerUtils.GetPlayerName(iIndex, pi.name), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 
+			std::vector<PriorityLabel_t*> vTags = {};
 			if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Priority)
 			{
-				if (auto pTag = F::PlayerUtils.GetSignificantTag(pi.friendsID, 1)) // 50 alpha as white outline tends to be more apparent
-					tCache.m_vText.push_back({ TextTop, pTag->Name, pTag->Color, H::Draw.IsColorDark(pTag->Color) ? Color_t(255, 255, 255, 255) : Color_t(0, 0, 0, 255) });
+				/*if ( auto pTag = F::PlayerUtils.GetSignificantTag( pi.friendsID, 1 ) ) // 50 alpha as white outline tends to be more apparent
+					tCache.m_vText.push_back({ TextTop, pTag->Name, pTag->Color, H::Draw.IsColorDark(pTag->Color) ? Color_t(255, 255, 255, 255) : Color_t(0, 0, 0, 255) });*/
+				if ( auto pTag = F::PlayerUtils.GetSignificantTag( pi.friendsID, 1 ) )
+				{
+					vTags.push_back( pTag );
+				}
 			}
 
 			if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Labels)
 			{
-				std::vector<PriorityLabel_t*> vTags = {};
 				for (auto& iID : F::PlayerUtils.m_mPlayerTags[pi.friendsID])
 				{
 					auto pTag = F::PlayerUtils.GetTag(iID);
@@ -98,21 +102,21 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 					if (pTag->Label)
 						vTags.push_back(pTag);
 				}
+			}
 
-				if (vTags.size())
+			if ( vTags.size( ) )
+			{
+				std::sort( vTags.begin( ), vTags.end( ), [ & ]( const auto a, const auto b ) -> bool
 				{
-					std::sort(vTags.begin(), vTags.end(), [&](const auto a, const auto b) -> bool
-						{
-							// sort by priority if unequal
-							if (a->Priority != b->Priority)
-								return a->Priority > b->Priority;
+					// sort by priority if unequal
+					if ( a->Priority != b->Priority )
+						return a->Priority > b->Priority;
 
-							return a->Name < b->Name;
-						});
+					return a->Name < b->Name;
+				} );
 
-					for (auto& pTag : vTags) // 50 alpha as white outline tends to be more apparent
-						tCache.m_vText.push_back({ TextRight, pTag->Name, pTag->Color, H::Draw.IsColorDark(pTag->Color) ? Color_t(255, 255, 255, 255) : Color_t(0, 0, 0, 255) });
-				}
+				for ( auto& pTag : vTags ) // 50 alpha as white outline tends to be more apparent
+					tCache.m_vText.push_back( { TextRight, pTag->Name, pTag->Color, H::Draw.IsColorDark( pTag->Color ) ? Color_t( 255, 255, 255, 255 ) : Color_t( 0, 0, 0, 255 ) } );
 			}
 		}
 

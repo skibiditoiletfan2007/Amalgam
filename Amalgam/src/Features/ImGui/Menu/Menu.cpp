@@ -2078,7 +2078,7 @@ void CMenu::MenuSettings()
 									for (auto it = vTags.begin(); it != vTags.end();)
 									{
 										if (_iID == *it)
-											vTags.erase(it);
+											it = vTags.erase(it);
 										else
 										{
 											if (_iID < *it)

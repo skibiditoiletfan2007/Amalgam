@@ -900,6 +900,8 @@ int CAimbotProjectile::CanHit(Target_t& target, CTFPlayer* pLocal, CTFWeaponBase
 	const float flTime = TICKS_TO_TIME(pProjectilePath->size());
 	target.m_vPos = vTarget;
 
+	if ( Vars::Aimbot::General::AimType.Value == Vars::Aimbot::General::AimTypeEnum::Silent )
+		G::AimPosition = vTarget;
 
 	if (iLowestPriority != std::numeric_limits<int>::max() &&
 		(target.m_TargetType == ETargetType::Player ? !storage.m_bFailed : true)) // don't attempt to aim at players when movesim fails
@@ -1041,8 +1043,8 @@ bool CAimbotProjectile::RunMain(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUser
 		&& (nWeaponID == TF_WEAPON_COMPOUND_BOW || nWeaponID == TF_WEAPON_PIPEBOMBLAUNCHER || nWeaponID == TF_WEAPON_CANNON))
 	{
 		pCmd->buttons |= IN_ATTACK;
-		if (!G::CanPrimaryAttack && !G::Reloading && Vars::Aimbot::General::AimType.Value == Vars::Aimbot::General::AimTypeEnum::Silent)
-			return false;
+		/*if (!G::CanPrimaryAttack && !G::Reloading && Vars::Aimbot::General::AimType.Value == Vars::Aimbot::General::AimTypeEnum::Silent)
+			return false;*/
 	}
 
 #ifdef SPLASH_DEBUG1
@@ -1063,9 +1065,6 @@ bool CAimbotProjectile::RunMain(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUser
 			Aim(pCmd, target.m_vAngleTo);
 			break;
 		}
-
-		if (Vars::Aimbot::General::AimType.Value == Vars::Aimbot::General::AimTypeEnum::Silent)
-				G::AimPosition = target.m_vPos;
 
 		if (Vars::Aimbot::General::AutoShoot.Value)
 		{

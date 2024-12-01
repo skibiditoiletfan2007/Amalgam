@@ -38,11 +38,11 @@ Color_t CColor::GetEntityDrawColor(CTFPlayer* pLocal, CBaseEntity* pEntity, bool
 			out = F::PlayerUtils.m_vTags[FRIEND_TAG].Color;
 			if (pType) *pType = 3;
 		}
-		else if (auto pTag = F::PlayerUtils.GetSignificantTag(pPlayer->entindex()))
+		/*else if (auto pTag = F::PlayerUtils.GetSignificantTag(pPlayer->entindex()))
 		{
 			out = pTag->Color;
 			if (pType) *pType = 4;
-		}
+		}*/
 		else if (pPlayer->IsCloaked())
 		{
 			out = Vars::Colors::Cloak.Value;
