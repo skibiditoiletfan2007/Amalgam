@@ -55,7 +55,7 @@ Color_t CColor::GetEntityDrawColor(CTFPlayer* pLocal, CBaseEntity* pEntity, bool
 		}
 	}
 
-	if (pEntity->entindex() == G::Target.first && abs(G::Target.second - I::GlobalVars->tickcount) < 32)
+	if (pEntity->entindex() == G::Target.first)
 	{
 		out = Vars::Colors::Target.Value;
 		if (pType) *pType = 7;
