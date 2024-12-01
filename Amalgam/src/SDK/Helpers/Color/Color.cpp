@@ -55,7 +55,7 @@ Color_t CColor::GetEntityDrawColor(CTFPlayer* pLocal, CBaseEntity* pEntity, bool
 		}
 	}
 
-	if (pEntity->entindex() == G::Target.first)
+	if ( G::Target.first > 0 && pEntity->entindex() == G::Target.first)
 	{
 		out = Vars::Colors::Target.Value;
 		if (pType) *pType = 7;
