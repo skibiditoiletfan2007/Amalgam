@@ -688,8 +688,6 @@ void CAimbotHitscan::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pC
 		}
 
 		G::Target = { target.m_pEntity->entindex(), I::GlobalVars->tickcount };
-		if (Vars::Aimbot::General::AimType.Value == Vars::Aimbot::General::AimTypeEnum::Silent)
-			G::AimPosition = target.m_vPos;
 
 		const auto iResult = CanHit(target, pLocal, pWeapon);
 		if (!iResult) continue;
@@ -698,6 +696,9 @@ void CAimbotHitscan::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pC
 			Aim(pCmd, target.m_vAngleTo);
 			break;
 		}
+
+		if (Vars::Aimbot::General::AimType.Value == Vars::Aimbot::General::AimTypeEnum::Silent)
+			G::AimPosition = target.m_vPos;
 
 
 		bool bShouldFire = ShouldFire(pLocal, pWeapon, pCmd, target);

@@ -431,8 +431,6 @@ void CMenu::MenuVisuals()
 						FColorPicker("BLU color", Vars::Colors::TeamBlu, 0, FColorPicker_Middle | FColorPicker_SameLine);
 					}
 
-					FColorPicker("Health bar top", Vars::Colors::HealthBar, false, 0, FColorPicker_Left);
-					FColorPicker("Health bar bottom", Vars::Colors::HealthBar, true, 0, FColorPicker_Middle | FColorPicker_SameLine);
 					FColorPicker("Uber bar", Vars::Colors::UberBar, 0, FColorPicker_Left);
 					FColorPicker("Invulnerable color", Vars::Colors::Invulnerable, 0, FColorPicker_Middle | FColorPicker_SameLine);
 					FColorPicker("Overheal color", Vars::Colors::Overheal, 0, FColorPicker_Left);
