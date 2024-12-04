@@ -599,6 +599,123 @@ void CVisuals::DrawPath(std::deque<Vec3>& Line, Color_t Color, int iStyle, bool 
 		}
 	}
 
+	if ( iStyle == Vars::Visuals::Simulation::StyleEnum::Nitro )
+	{
+		// Define green color for the impact box
+		Color_t Green = { 0, 255, 0, 255 }; // RGBA for green
+		float BoxSize = Vars::Visuals::Simulation::BoxSize.Value;
+
+		Vec3 FirstPoint = Line[ 0 ];
+		Vec3 LastPoint = Line[ Line.size( ) - 1 ];
+
+		//yaw never changes on a projectile once it has been spawned
+		Vec3 Angle = Math::CalcAngle( FirstPoint, LastPoint, false );
+		Angle.x = 0.f;
+
+		//base the prism orientation off of our yaw
+		Vec3 Forward, Right, Up;
+		Math::AngleVectors( Angle, &Forward, &Right, &Up );
+
+		//cube points
+		Vec3 ForwardRightTop = ( Forward /** BoxSize*/ ) + ( Right * BoxSize ) + ( Up * BoxSize );
+		Vec3 ForwardRightDown = ( Forward /** BoxSize*/ ) + ( Right * BoxSize ) + ( Up * -BoxSize );
+		Vec3 ForwardLeftTop = ( Forward /** BoxSize*/ ) + ( Right * -BoxSize ) + ( Up * BoxSize );
+		Vec3 ForwardLeftDown = ( Forward /** BoxSize*/ ) + ( Right * -BoxSize ) + ( Up * -BoxSize );
+
+		Vec3 BackRightTop = ( Forward /** -BoxSize*/ ) + ( Right * BoxSize ) + ( Up * BoxSize );
+		Vec3 BackRightDown = ( Forward /** -BoxSize*/ ) + ( Right * BoxSize ) + ( Up * -BoxSize );
+		Vec3 BackLeftTop = ( Forward /** -BoxSize*/ ) + ( Right * -BoxSize ) + ( Up * BoxSize );
+		Vec3 BackLeftDown = ( Forward /** -BoxSize*/ ) + ( Right * -BoxSize ) + ( Up * -BoxSize );
+
+		//hexagonal prism points
+		Vec3 ForwardTopHexagonal = ( Forward * BoxSize ) + ( Right ) + ( Up * BoxSize );
+		Vec3 ForwardDownHexagonal = ( Forward * BoxSize ) + ( Right ) + ( Up * -BoxSize );
+		Vec3 BackTopHexagonal = ( Forward * -BoxSize ) + ( Right ) + ( Up * BoxSize );
+		Vec3 BackDownHexagonal = ( Forward * -BoxSize ) + ( Right ) + ( Up * -BoxSize );
+
+		Vec3 StartPoint = Vec3( );
+		Vec3 PrevStartPoint = Vec3( );
+		Vec3 Difference = Vec3( );
+		bool Transition = false;
+
+		for ( size_t i = 1; i < Line.size( ); i++ )
+		{
+			if ( flTime < 0.f && Line.size( ) - i > -flTime )
+				continue;
+
+			Vec3 Point = Line[ i ];
+			Vec3 PrevPoint = Line[ i - 1 ];
+			if ( i == 1 )
+			{
+				StartPoint = PrevPoint + Vec3( 0.f, 0.f, BoxSize );
+			}
+
+			//if our height goes out of bounds, render the prism containing points inside of it
+			//ISSUE: small gaps between prisms due to point displacement
+			//potential fix: interpolate projectile positions?
+			if ( PrevPoint.z > StartPoint.z + BoxSize )
+			{
+				PrevStartPoint = StartPoint;
+				StartPoint = PrevPoint + Vec3( 0.f, 0.f, BoxSize );
+				Difference = StartPoint - PrevStartPoint;
+				Difference.z = 0.f;
+				Transition = true;
+			}
+
+			if ( PrevPoint.z < StartPoint.z - BoxSize )
+			{
+				PrevStartPoint = StartPoint;
+				StartPoint = PrevPoint - Vec3( 0.f, 0.f, BoxSize );
+				Difference = StartPoint - PrevStartPoint;
+				Difference.z = 0.f;
+				Transition = true;
+			}
+
+			if ( Transition )
+			{
+				//front face
+				//RenderLine( PrevStartPoint + Difference + ForwardLeftTop, PrevStartPoint + Difference + ForwardRightTop, Green, bZBuffer );
+				//RenderLine( PrevStartPoint + Difference + ForwardLeftDown, PrevStartPoint + Difference + ForwardRightDown, Green, bZBuffer );
+				RenderLine( PrevStartPoint + Difference + ForwardRightTop, PrevStartPoint + Difference + ForwardRightDown, Green, bZBuffer );
+				RenderLine( PrevStartPoint + Difference + ForwardLeftTop, PrevStartPoint + Difference + ForwardLeftDown, Green, bZBuffer );
+
+				//front hexagonal prism lines
+				RenderLine( PrevStartPoint + Difference + ForwardLeftTop, PrevStartPoint + Difference + ForwardTopHexagonal, 
+							Green, bZBuffer );
+				RenderLine( PrevStartPoint + Difference + ForwardRightTop, PrevStartPoint + Difference + ForwardTopHexagonal,
+							Green, bZBuffer );
+				RenderLine( PrevStartPoint + Difference + ForwardLeftDown, PrevStartPoint + Difference + ForwardDownHexagonal,
+							Green, bZBuffer );
+				RenderLine( PrevStartPoint + Difference + ForwardRightDown, PrevStartPoint + Difference + ForwardDownHexagonal,
+							Green, bZBuffer );
+				RenderLine( PrevStartPoint + Difference + ForwardTopHexagonal, PrevStartPoint + Difference + ForwardDownHexagonal,
+							Green, bZBuffer );
+
+				//back face
+				//RenderLine( PrevStartPoint + BackLeftTop, PrevStartPoint + BackRightTop, Green, bZBuffer );
+				//RenderLine( PrevStartPoint + BackLeftDown, PrevStartPoint + BackRightDown, Green, bZBuffer );
+				RenderLine( PrevStartPoint + BackRightTop, PrevStartPoint + BackRightDown, Green, bZBuffer );
+				RenderLine( PrevStartPoint + BackLeftTop, PrevStartPoint + BackLeftDown, Green, bZBuffer );
+
+				//back hexagonal prism lines
+				RenderLine( PrevStartPoint + BackLeftTop, PrevStartPoint + BackTopHexagonal, Green, bZBuffer );
+				RenderLine( PrevStartPoint + BackRightTop, PrevStartPoint + BackTopHexagonal, Green, bZBuffer );
+				RenderLine( PrevStartPoint + BackLeftDown, PrevStartPoint + BackDownHexagonal, Green, bZBuffer );
+				RenderLine( PrevStartPoint + BackRightDown, PrevStartPoint + BackDownHexagonal, Green, bZBuffer );
+				RenderLine( PrevStartPoint + BackTopHexagonal, PrevStartPoint + BackDownHexagonal, Green, bZBuffer );
+
+				//connecting lines
+				RenderLine( PrevStartPoint + Difference + ForwardLeftTop, PrevStartPoint + BackLeftTop, Green, bZBuffer );
+				RenderLine( PrevStartPoint + Difference + ForwardRightTop, PrevStartPoint + BackRightTop, Green, bZBuffer );
+				RenderLine( PrevStartPoint + Difference + ForwardLeftDown, PrevStartPoint + BackLeftDown, Green, bZBuffer );
+				RenderLine( PrevStartPoint + Difference + ForwardRightDown, PrevStartPoint + BackRightDown, Green, bZBuffer );
+				Transition = false;
+			}
+		}
+
+		return;
+	}
+
 	for (size_t i = 1; i < Line.size(); i++)
 	{
 		if (flTime < 0.f && Line.size() - i > -flTime)

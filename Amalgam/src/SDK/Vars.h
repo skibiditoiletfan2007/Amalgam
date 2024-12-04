@@ -509,7 +509,7 @@ namespace Vars
 		SUBNAMESPACE_END(Bullet)
 
 		SUBNAMESPACE_BEGIN(Simulation)
-			Enum(Style, Off, Line, Separators, Spaced, Arrow, Boxes, ImpactBox, VelocityPath);
+			Enum(Style, Off, Line, Separators, Spaced, Arrow, Boxes, ImpactBox, VelocityPath, Nitro);
 			CVar(PlayerPath, 0, VISUAL)
 			CVar(ProjectilePath, 0, VISUAL)
 			CVar(TrajectoryPath, 0, VISUAL)
@@ -517,6 +517,7 @@ namespace Vars
 			CVarEnum(SplashRadius, 0, VISUAL, Simulation = 1 << 0, Priority = 1 << 1, Enemy = 1 << 2, Team = 1 << 3, Local = 1 << 4, Friends = 1 << 5, Rockets = 1 << 6, Stickies = 1 << 7, Pipes = 1 << 8, ScorchShot = 1 << 9, Trace = 1 << 10)
 			CVar(Timed, false, VISUAL)
 			CVar(Box, true, VISUAL)
+			CVar(BoxSize, 6.0f, VISUAL)
 			CVar(SwingLines, false, VISUAL)
 			CVar(ProjectileCamera, false, VISUAL)
 			CVar(ProjectileWindow, WindowBox_t(), NOBIND)
