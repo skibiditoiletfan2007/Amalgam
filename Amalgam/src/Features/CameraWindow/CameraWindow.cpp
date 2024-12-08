@@ -92,14 +92,14 @@ void CCameraWindow::Unload()
 	if (m_pCameraMaterial)
 	{
 		m_pCameraMaterial->DecrementReferenceCount();
-		m_pCameraMaterial->DeleteIfUnreferenced();
+		//m_pCameraMaterial->DeleteIfUnreferenced();
 		m_pCameraMaterial = nullptr;
 	}
 
 	if (m_pCameraTexture)
 	{
 		m_pCameraTexture->DecrementReferenceCount();
-		m_pCameraTexture->DeleteIfUnreferenced();
+		//m_pCameraTexture->DeleteIfUnreferenced();
 		m_pCameraTexture = nullptr;
 	}
 }

@@ -53,18 +53,15 @@ void CVisuals::DrawTicks(CTFPlayer* pLocal)
 	int iTicks = G::ShiftedTicks + G::ChokeAmount;
 	float flRatio = float(std::clamp(iTicks, 0, G::MaxShift)) / G::MaxShift;
 
-	// Adjust the size of the progress bar and background
-	int iSizeX = H::Draw.Scale(100, Scale_Round); // Slightly reduced width of the background
-	int iSizeY = H::Draw.Scale(13, Scale_Round);  // Keep the height as it is
+	// Set size and position for the progress bar and background
+	int iSizeX = H::Draw.Scale(100, Scale_Round); // Original width
+	int iSizeY = H::Draw.Scale(9, Scale_Round);   // Slightly reduced height
 
-	int iPosX = dtPos.x - iSizeX / 2;             // Center horizontally
-	int iPosY = dtPos.y + fFont.m_nTall + H::Draw.Scale(4); // Adjusted for alignment
+	int iPosX = dtPos.x - iSizeX / 2;
+	int iPosY = dtPos.y + fFont.m_nTall + H::Draw.Scale(4);
 
-	// Corner radius for rounded edges
-	int cornerRadius = H::Draw.Scale(5, Scale_Round);
-
-	// Draw the tick count text
-	H::Draw.String(fFont, dtPos.x, dtPos.y + 2,
+	// Draw the tick count text slightly higher
+	H::Draw.String(fFont, dtPos.x, dtPos.y + 1, // Adjusted from +2 to +1
 		Vars::Menu::Theme::Active.Value,
 		ALIGN_TOP, std::format("Ticks {} / {}", iTicks, G::MaxShift).c_str());
 
@@ -75,20 +72,22 @@ void CVisuals::DrawTicks(CTFPlayer* pLocal)
 			ALIGN_TOP, "Not Ready");
 	}
 
-	// Draw the background of the progress bar with rounded corners
-	H::Draw.FillRoundRect(iPosX, iPosY, iSizeX, iSizeY, cornerRadius, Vars::Menu::Theme::Background.Value);
+	// Draw the background of the progress bar (black transparent)
+	H::Draw.FillRect(iPosX, iPosY, iSizeX, iSizeY, Color_t(0, 0, 0, 128)); // Black transparent background
+
+	// Draw an outline (black)
+	H::Draw.FillRect(iPosX - 1, iPosY - 1, iSizeX + 2, 1, Color_t(0, 0, 0, 255)); // Top
+	H::Draw.FillRect(iPosX - 1, iPosY + iSizeY, iSizeX + 2, 1, Color_t(0, 0, 0, 255)); // Bottom
+	H::Draw.FillRect(iPosX - 1, iPosY, 1, iSizeY, Color_t(0, 0, 0, 255)); // Left
+	H::Draw.FillRect(iPosX + iSizeX, iPosY, 1, iSizeY, Color_t(0, 0, 0, 255)); // Right
 
 	// Draw the progress bar if the ratio is greater than 0
 	if (flRatio > 0.0f)
 	{
-		// Adjust the size and position for the progress indicator
-		int progressSizeX = iSizeX - 4;  // Slightly smaller width to fit inside the background
-		int progressSizeY = iSizeY - 4;  // Slightly smaller height
-		int progressPosX = iPosX + 2;    // Adjust to center inside the background
-		int progressPosY = iPosY + 2;    // Align vertically inside the background
+		int progressWidth = iSizeX * flRatio;
 
-		// Draw the filled progress bar with rounded corners
-		H::Draw.FillRoundRect(progressPosX, progressPosY, progressSizeX * flRatio, progressSizeY, cornerRadius, Vars::Menu::Theme::Accent.Value);
+		// Draw the filled progress bar
+		H::Draw.FillRect(iPosX, iPosY, progressWidth, iSizeY, Vars::Menu::Theme::Accent.Value);
 	}
 }
 
@@ -597,6 +596,123 @@ void CVisuals::DrawPath(std::deque<Vec3>& Line, Color_t Color, int iStyle, bool 
 				RenderLine(Line[i], Line[i] + vAdditionalSeparator, speedColor, bZBuffer);
 			}
 		}
+	}
+
+	if ( iStyle == Vars::Visuals::Simulation::StyleEnum::Nitro )
+	{
+		// Define green color for the impact box
+		Color_t Green = { 0, 255, 0, 255 }; // RGBA for green
+		float BoxSize = Vars::Visuals::Simulation::BoxSize.Value;
+
+		Vec3 FirstPoint = Line[ 0 ];
+		Vec3 LastPoint = Line[ Line.size( ) - 1 ];
+
+		//yaw never changes on a projectile once it has been spawned
+		Vec3 Angle = Math::CalcAngle( FirstPoint, LastPoint, false );
+		Angle.x = 0.f;
+
+		//base the prism orientation off of our yaw
+		Vec3 Forward, Right, Up;
+		Math::AngleVectors( Angle, &Forward, &Right, &Up );
+
+		//cube points
+		Vec3 ForwardRightTop = ( Forward /** BoxSize*/ ) + ( Right * BoxSize ) + ( Up * BoxSize );
+		Vec3 ForwardRightDown = ( Forward /** BoxSize*/ ) + ( Right * BoxSize ) + ( Up * -BoxSize );
+		Vec3 ForwardLeftTop = ( Forward /** BoxSize*/ ) + ( Right * -BoxSize ) + ( Up * BoxSize );
+		Vec3 ForwardLeftDown = ( Forward /** BoxSize*/ ) + ( Right * -BoxSize ) + ( Up * -BoxSize );
+
+		Vec3 BackRightTop = ( Forward /** -BoxSize*/ ) + ( Right * BoxSize ) + ( Up * BoxSize );
+		Vec3 BackRightDown = ( Forward /** -BoxSize*/ ) + ( Right * BoxSize ) + ( Up * -BoxSize );
+		Vec3 BackLeftTop = ( Forward /** -BoxSize*/ ) + ( Right * -BoxSize ) + ( Up * BoxSize );
+		Vec3 BackLeftDown = ( Forward /** -BoxSize*/ ) + ( Right * -BoxSize ) + ( Up * -BoxSize );
+
+		//hexagonal prism points
+		Vec3 ForwardTopHexagonal = ( Forward * BoxSize ) + ( Right ) + ( Up * BoxSize );
+		Vec3 ForwardDownHexagonal = ( Forward * BoxSize ) + ( Right ) + ( Up * -BoxSize );
+		Vec3 BackTopHexagonal = ( Forward * -BoxSize ) + ( Right ) + ( Up * BoxSize );
+		Vec3 BackDownHexagonal = ( Forward * -BoxSize ) + ( Right ) + ( Up * -BoxSize );
+
+		Vec3 StartPoint = Vec3( );
+		Vec3 PrevStartPoint = Vec3( );
+		Vec3 Difference = Vec3( );
+		bool Transition = false;
+
+		for ( size_t i = 1; i < Line.size( ); i++ )
+		{
+			if ( flTime < 0.f && Line.size( ) - i > -flTime )
+				continue;
+
+			Vec3 Point = Line[ i ];
+			Vec3 PrevPoint = Line[ i - 1 ];
+			if ( i == 1 )
+			{
+				StartPoint = PrevPoint + Vec3( 0.f, 0.f, BoxSize );
+			}
+
+			//if our height goes out of bounds, render the prism containing points inside of it
+			//ISSUE: small gaps between prisms due to point displacement
+			//potential fix: interpolate projectile positions?
+			if ( PrevPoint.z > StartPoint.z + BoxSize )
+			{
+				PrevStartPoint = StartPoint;
+				StartPoint = PrevPoint + Vec3( 0.f, 0.f, BoxSize );
+				Difference = StartPoint - PrevStartPoint;
+				Difference.z = 0.f;
+				Transition = true;
+			}
+
+			if ( PrevPoint.z < StartPoint.z - BoxSize )
+			{
+				PrevStartPoint = StartPoint;
+				StartPoint = PrevPoint - Vec3( 0.f, 0.f, BoxSize );
+				Difference = StartPoint - PrevStartPoint;
+				Difference.z = 0.f;
+				Transition = true;
+			}
+
+			if ( Transition )
+			{
+				//front face
+				//RenderLine( PrevStartPoint + Difference + ForwardLeftTop, PrevStartPoint + Difference + ForwardRightTop, Green, bZBuffer );
+				//RenderLine( PrevStartPoint + Difference + ForwardLeftDown, PrevStartPoint + Difference + ForwardRightDown, Green, bZBuffer );
+				RenderLine( PrevStartPoint + Difference + ForwardRightTop, PrevStartPoint + Difference + ForwardRightDown, Green, bZBuffer );
+				RenderLine( PrevStartPoint + Difference + ForwardLeftTop, PrevStartPoint + Difference + ForwardLeftDown, Green, bZBuffer );
+
+				//front hexagonal prism lines
+				RenderLine( PrevStartPoint + Difference + ForwardLeftTop, PrevStartPoint + Difference + ForwardTopHexagonal, 
+							Green, bZBuffer );
+				RenderLine( PrevStartPoint + Difference + ForwardRightTop, PrevStartPoint + Difference + ForwardTopHexagonal,
+							Green, bZBuffer );
+				RenderLine( PrevStartPoint + Difference + ForwardLeftDown, PrevStartPoint + Difference + ForwardDownHexagonal,
+							Green, bZBuffer );
+				RenderLine( PrevStartPoint + Difference + ForwardRightDown, PrevStartPoint + Difference + ForwardDownHexagonal,
+							Green, bZBuffer );
+				RenderLine( PrevStartPoint + Difference + ForwardTopHexagonal, PrevStartPoint + Difference + ForwardDownHexagonal,
+							Green, bZBuffer );
+
+				//back face
+				//RenderLine( PrevStartPoint + BackLeftTop, PrevStartPoint + BackRightTop, Green, bZBuffer );
+				//RenderLine( PrevStartPoint + BackLeftDown, PrevStartPoint + BackRightDown, Green, bZBuffer );
+				RenderLine( PrevStartPoint + BackRightTop, PrevStartPoint + BackRightDown, Green, bZBuffer );
+				RenderLine( PrevStartPoint + BackLeftTop, PrevStartPoint + BackLeftDown, Green, bZBuffer );
+
+				//back hexagonal prism lines
+				RenderLine( PrevStartPoint + BackLeftTop, PrevStartPoint + BackTopHexagonal, Green, bZBuffer );
+				RenderLine( PrevStartPoint + BackRightTop, PrevStartPoint + BackTopHexagonal, Green, bZBuffer );
+				RenderLine( PrevStartPoint + BackLeftDown, PrevStartPoint + BackDownHexagonal, Green, bZBuffer );
+				RenderLine( PrevStartPoint + BackRightDown, PrevStartPoint + BackDownHexagonal, Green, bZBuffer );
+				RenderLine( PrevStartPoint + BackTopHexagonal, PrevStartPoint + BackDownHexagonal, Green, bZBuffer );
+
+				//connecting lines
+				RenderLine( PrevStartPoint + Difference + ForwardLeftTop, PrevStartPoint + BackLeftTop, Green, bZBuffer );
+				RenderLine( PrevStartPoint + Difference + ForwardRightTop, PrevStartPoint + BackRightTop, Green, bZBuffer );
+				RenderLine( PrevStartPoint + Difference + ForwardLeftDown, PrevStartPoint + BackLeftDown, Green, bZBuffer );
+				RenderLine( PrevStartPoint + Difference + ForwardRightDown, PrevStartPoint + BackRightDown, Green, bZBuffer );
+				Transition = false;
+			}
+		}
+
+		return;
 	}
 
 	for (size_t i = 1; i < Line.size(); i++)

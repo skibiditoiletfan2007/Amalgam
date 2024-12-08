@@ -24,7 +24,7 @@ void CMaterials::Remove(IMaterial* pMaterial)
 		m_mMatList.erase(it);
 
 	pMaterial->DecrementReferenceCount();
-	pMaterial->DeleteIfUnreferenced();
+	//pMaterial->DeleteIfUnreferenced();
 	pMaterial = nullptr;
 }
 

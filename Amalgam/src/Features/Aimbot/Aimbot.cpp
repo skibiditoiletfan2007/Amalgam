@@ -64,6 +64,7 @@ void CAimbot::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 
 	bRan = false;
 	G::AimPosition = Vec3();
+	G::Target.first = 0;
 	if (pCmd->weaponselect)
 		return;
 

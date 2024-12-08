@@ -730,7 +730,7 @@ void CMenu::MenuVisuals()
 				{
 					FDropdown("Player path", Vars::Visuals::Simulation::PlayerPath, { "Off", "Line", "Separators", "Spaced", "Arrow", "Boxes", "ImpactBox", "VelocityPath"}, {}, FDropdown_Left, -20);
 					FColorPicker("Player path", Vars::Colors::PlayerPath, 0, FColorPicker_Dropdown | FColorPicker_Tooltip); FColorPicker("Player path clipped", Vars::Colors::PlayerPathClipped, 0, FColorPicker_Dropdown | FColorPicker_Tooltip);
-					FDropdown("Projectile path", Vars::Visuals::Simulation::ProjectilePath, { "Off", "Line", "Separators", "Spaced", "Arrow", "Boxes", "ImpactBox", "VelocityPath"}, {}, FDropdown_Right, -20);
+					FDropdown("Projectile path", Vars::Visuals::Simulation::ProjectilePath, { "Off", "Line", "Separators", "Spaced", "Arrow", "Boxes", "ImpactBox", "VelocityPath", "Nitro" }, { }, FDropdown_Right, -20 );
 					FColorPicker("Projectile path", Vars::Colors::ProjectilePath, 0, FColorPicker_Dropdown | FColorPicker_Tooltip); FColorPicker("Projectile path clipped", Vars::Colors::ProjectilePathClipped, 0, FColorPicker_Dropdown | FColorPicker_Tooltip);
 					FDropdown("Trajectory path", Vars::Visuals::Simulation::TrajectoryPath, { "Off", "Line", "Separators", "Spaced" }, {}, FDropdown_Left, -20);
 					FColorPicker("Trajectory path", Vars::Colors::TrajectoryPath, 0, FColorPicker_Dropdown | FColorPicker_Tooltip); FColorPicker("Trajectory path clipped", Vars::Colors::TrajectoryPathClipped, 0, FColorPicker_Dropdown | FColorPicker_Tooltip);
@@ -738,6 +738,10 @@ void CMenu::MenuVisuals()
 					FColorPicker("Shot path", Vars::Colors::ShotPath, 0, FColorPicker_Dropdown | FColorPicker_Tooltip); FColorPicker("Shot path clipped", Vars::Colors::ShotPathClipped, 0, FColorPicker_Dropdown | FColorPicker_Tooltip);
 					FDropdown("Splash radius", Vars::Visuals::Simulation::SplashRadius, { "Simulation", "##Divider", "Priority", "Enemy", "Team", "Local", "Friends", "##Divider", "Rockets", "Stickies", "Pipes", "Scorch shot", "##Divider", "Trace" }, {}, FDropdown_Multi, -20);
 					FColorPicker("Splash radius", Vars::Colors::SplashRadius, 0, FColorPicker_Dropdown | FColorPicker_Tooltip); FColorPicker("Splash radius clipped", Vars::Colors::SplashRadiusClipped, 0, FColorPicker_Dropdown | FColorPicker_Tooltip);
+					if ( Vars::Visuals::Simulation::ProjectilePath.Value == Vars::Visuals::Simulation::StyleEnum::Nitro )
+					{
+						FSlider( "Nitro Box Size", Vars::Visuals::Simulation::BoxSize, 4.0f, 12.0f, 0.5f, "%g", FSlider_Precision );
+					}
 					FToggle("Timed", Vars::Visuals::Simulation::Timed, FToggle_Left);
 					FToggle("Box", Vars::Visuals::Simulation::Box, FToggle_Right);
 					FToggle("Swing prediction lines", Vars::Visuals::Simulation::SwingLines, FToggle_Left);
@@ -2078,7 +2082,7 @@ void CMenu::MenuSettings()
 									for (auto it = vTags.begin(); it != vTags.end();)
 									{
 										if (_iID == *it)
-											vTags.erase(it);
+											it = vTags.erase(it);
 										else
 										{
 											if (_iID < *it)
