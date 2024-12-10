@@ -862,32 +862,45 @@ void CESP::DrawPlayers()
 
 		if (tCache.m_bHealthBar)
 		{
+			// Define health bar and background parameters
+			int barWidth = H::Draw.Scale(1); // 1-pixel thick health bar
+			Color_t bgColor = { 0, 0, 0, 150 }; // Semi-transparent black
+
+			// Draw the background (1 pixel larger on all sides)
+			H::Draw.FillRect(
+				x - (barWidth / 2) - 1, // Extend 1 pixel to the left
+				y - 1,                 // Extend 1 pixel upward
+				barWidth + 2,          // Increase width by 2 pixels (1 on each side)
+				h + 2,                 // Increase height by 2 pixels (1 on each side)
+				bgColor
+			);
+
 			if (tCache.m_flHealth > 1.f)
 			{
-				// Draw overheal portion (no changes here)
+				// Draw overheal portion
 				Color_t overhealColor = Vars::Colors::Overheal.Value;
 				H::Draw.FillRectPercent(
-					x - H::Draw.Scale(6),
+					x - barWidth / 2, // Centered in the background
 					y,
-					H::Draw.Scale(2, Scale_Round),
+					barWidth,
 					h,
 					tCache.m_flHealth - 1.f,
 					overhealColor,
-					{ 0, 0, 0, 0 },
+					{ 0, 0, 0, 0 }, // No outline
 					ALIGN_BOTTOM,
 					true
 				);
 
 				// Draw the normal health bar portion
-				Color_t cColor = { 0, 255, 0, 255 }; // Full health is always green
+				Color_t cColor = { 95, 255, 77, 255 }; // Full health is green
 				H::Draw.FillRectPercent(
-					x - H::Draw.Scale(6),
+					x - barWidth / 2,
 					y,
-					H::Draw.Scale(2, Scale_Round),
+					barWidth,
 					h,
 					1.f,
 					cColor,
-					{ 0, 0, 0, 255 },
+					{ 0, 0, 0, 0 },
 					ALIGN_BOTTOM,
 					true
 				);
@@ -895,55 +908,80 @@ void CESP::DrawPlayers()
 			else
 			{
 				// Define fixed color stops for health
-				Color_t green = { 0, 255, 0, 255 };   // Full health
-				Color_t yellow = { 255, 255, 0, 255 }; // Mid health
-				Color_t orange = { 255, 165, 0, 255 }; // Low health
-				Color_t red = { 255, 0, 0, 255 };      // Critical health
+				Color_t green = { 95, 255, 77, 255 };   // Full health
+				Color_t yellow = { 255, 243, 62, 255 }; // Mid health
+				Color_t orange = { 255, 115, 54, 255 }; // Low health
+				Color_t red = { 255, 65, 68, 255 };     // Critical health
 
 				Color_t cColor;
 
 				// Interpolate colors based on health
 				if (tCache.m_flHealth > 0.5f)
 				{
-					// Green to Yellow transition
 					float factor = (tCache.m_flHealth - 0.5f) * 2.0f;
 					cColor = yellow.Lerp(green, factor);
 				}
 				else if (tCache.m_flHealth > 0.25f)
 				{
-					// Yellow to Orange transition
 					float factor = (tCache.m_flHealth - 0.25f) * 4.0f;
 					cColor = orange.Lerp(yellow, factor);
 				}
 				else
 				{
-					// Orange to Red transition
 					float factor = tCache.m_flHealth * 4.0f;
 					cColor = red.Lerp(orange, factor);
 				}
 
 				// Draw the normal health bar with interpolated color
 				H::Draw.FillRectPercent(
-					x - H::Draw.Scale(6),
+					x - barWidth / 2,
 					y,
-					H::Draw.Scale(2, Scale_Round),
+					barWidth,
 					h,
 					tCache.m_flHealth,
 					cColor,
-					{ 0, 0, 0, 255 },
+					{ 0, 0, 0, 0 },
 					ALIGN_BOTTOM,
 					true
 				);
 			}
-			lOffset += H::Draw.Scale(6);
 		}
 
 		if (tCache.m_bUberBar)
 		{
-			H::Draw.FillRectPercent(x, y + h + H::Draw.Scale(4), w, H::Draw.Scale(2, Scale_Round), tCache.m_flUber, Vars::Colors::UberBar.Value);
+			// Define the height for the Uber bar and background parameters
+			int barHeight = H::Draw.Scale(1); // 1-pixel high uber bar
+			int bgHeight = barHeight + 2;    // Background extends 1 pixel above and below
+			Color_t bgColor = { 0, 0, 0, 150 }; // Semi-transparent black background
+
+			// Calculate positions
+			int bgY = y + h + H::Draw.Scale(4) - 1; // Background starts 1 pixel higher
+			int barY = y + h + H::Draw.Scale(4);   // Bar is centered in the background
+
+			// Draw the background (extends 1 pixel on all sides)
+			H::Draw.FillRect(
+				x - 1,         // Extend 1 pixel to the left
+				bgY,           // Background top
+				w + 2,         // Increase width by 2 pixels
+				bgHeight,      // Background height (1 pixel above and below the bar)
+				bgColor
+			);
+
+			// Draw the Uber bar
+			H::Draw.FillRectPercent(
+				x,              // Start at original x position
+				barY,           // Centered within the background
+				w,              // Keep the original width
+				barHeight,      // 1-pixel high
+				tCache.m_flUber,
+				Vars::Colors::UberBar.Value // Uber bar color
+			);
+
+			// Adjust offset for subsequent UI elements
 			bOffset += H::Draw.Scale(6);
 		}
 
+		// Adjust text positioning
 		int iVerticalOffset = H::Draw.Scale(3, Scale_Floor) - 1;
 		for (auto& [iMode, sText, tColor, tOutline] : tCache.m_vText)
 		{
@@ -1013,6 +1051,20 @@ void CESP::DrawBuildings()
 		// Draw the health bar
 		if (tCache.m_bHealthBar)
 		{
+			// Define the health bar and background parameters
+			int barWidth = H::Draw.Scale(1); // 1-pixel wide health bar
+			int bgWidth = barWidth + 2;     // Background extends 1 pixel on each side
+			Color_t bgColor = { 0, 0, 0, 150 }; // Semi-transparent black background
+
+			// Draw the background (extends 1 pixel on all sides)
+			H::Draw.FillRect(
+				x - H::Draw.Scale(6) - 1, // Extend 1 pixel to the left
+				y - 1,                   // Extend 1 pixel upward
+				bgWidth,                 // Total background width (bar + 2 pixels)
+				h + 2,                   // Total background height (bar + 2 pixels)
+				bgColor
+			);
+
 			// Define fixed color stops for health
 			Color_t green = { 0, 255, 0, 255 };   // Full health
 			Color_t yellow = { 255, 255, 0, 255 }; // Mid health
@@ -1024,25 +1076,33 @@ void CESP::DrawBuildings()
 			// Interpolate colors based on health
 			if (tCache.m_flHealth > 0.5f)
 			{
-				// Green to Yellow transition
 				float factor = (tCache.m_flHealth - 0.5f) * 2.0f;
-				cColor = yellow.Lerp(green, factor); // Flip factor for proper interpolation
+				cColor = yellow.Lerp(green, factor); // Interpolate from green to yellow
 			}
 			else if (tCache.m_flHealth > 0.25f)
 			{
-				// Yellow to Orange transition
 				float factor = (tCache.m_flHealth - 0.25f) * 4.0f;
-				cColor = orange.Lerp(yellow, factor);
+				cColor = orange.Lerp(yellow, factor); // Interpolate from yellow to orange
 			}
 			else
 			{
-				// Orange to Red transition
 				float factor = tCache.m_flHealth * 4.0f;
-				cColor = red.Lerp(orange, factor);
+				cColor = red.Lerp(orange, factor); // Interpolate from orange to red
 			}
 
-			// Draw the health bar with the interpolated color
-			H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, tCache.m_flHealth, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
+			// Draw the health bar (1 pixel wide, aligned within the background)
+			H::Draw.FillRectPercent(
+				x - H::Draw.Scale(6), // Align within the background
+				y,
+				barWidth, // 1-pixel wide
+				h,
+				tCache.m_flHealth,
+				cColor,
+				{ 0, 0, 0, 0 }, // No outline
+				ALIGN_BOTTOM,
+				true
+			);
+
 			lOffset += H::Draw.Scale(6);
 		}
 
