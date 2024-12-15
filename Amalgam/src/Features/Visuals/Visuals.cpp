@@ -53,15 +53,18 @@ void CVisuals::DrawTicks(CTFPlayer* pLocal)
 	int iTicks = G::ShiftedTicks + G::ChokeAmount;
 	float flRatio = float(std::clamp(iTicks, 0, G::MaxShift)) / G::MaxShift;
 
-	// Set size and position for the progress bar and background
-	int iSizeX = H::Draw.Scale(100, Scale_Round); // Original width
-	int iSizeY = H::Draw.Scale(9, Scale_Round);   // Slightly reduced height
+	// Adjust the size of the progress bar and background
+	int iSizeX = H::Draw.Scale(100, Scale_Round); // Slightly reduced width of the background
+	int iSizeY = H::Draw.Scale(13, Scale_Round);  // Keep the height as it is
 
-	int iPosX = dtPos.x - iSizeX / 2;
-	int iPosY = dtPos.y + fFont.m_nTall + H::Draw.Scale(4);
+	int iPosX = dtPos.x - iSizeX / 2;             // Center horizontally
+	int iPosY = dtPos.y + fFont.m_nTall + H::Draw.Scale(4); // Adjusted for alignment
 
-	// Draw the tick count text slightly higher
-	H::Draw.String(fFont, dtPos.x, dtPos.y + 1, // Adjusted from +2 to +1
+	// Corner radius for rounded edges
+	int cornerRadius = H::Draw.Scale(5, Scale_Round);
+
+	// Draw the tick count text
+	H::Draw.String(fFont, dtPos.x, dtPos.y + 2,
 		Vars::Menu::Theme::Active.Value,
 		ALIGN_TOP, std::format("Ticks {} / {}", iTicks, G::MaxShift).c_str());
 
@@ -72,24 +75,23 @@ void CVisuals::DrawTicks(CTFPlayer* pLocal)
 			ALIGN_TOP, "Not Ready");
 	}
 
-	// Draw the background of the progress bar (black transparent)
-	H::Draw.FillRect(iPosX, iPosY, iSizeX, iSizeY, Color_t(0, 0, 0, 128)); // Black transparent background
-
-	// Draw an outline (black)
-	H::Draw.FillRect(iPosX - 1, iPosY - 1, iSizeX + 2, 1, Color_t(0, 0, 0, 255)); // Top
-	H::Draw.FillRect(iPosX - 1, iPosY + iSizeY, iSizeX + 2, 1, Color_t(0, 0, 0, 255)); // Bottom
-	H::Draw.FillRect(iPosX - 1, iPosY, 1, iSizeY, Color_t(0, 0, 0, 255)); // Left
-	H::Draw.FillRect(iPosX + iSizeX, iPosY, 1, iSizeY, Color_t(0, 0, 0, 255)); // Right
+	// Draw the background of the progress bar with rounded corners
+	H::Draw.FillRoundRect(iPosX, iPosY, iSizeX, iSizeY, cornerRadius, Vars::Menu::Theme::Background.Value);
 
 	// Draw the progress bar if the ratio is greater than 0
 	if (flRatio > 0.0f)
 	{
-		int progressWidth = iSizeX * flRatio;
+		// Adjust the size and position for the progress indicator
+		int progressSizeX = iSizeX - 4;  // Slightly smaller width to fit inside the background
+		int progressSizeY = iSizeY - 4;  // Slightly smaller height
+		int progressPosX = iPosX + 2;    // Adjust to center inside the background
+		int progressPosY = iPosY + 2;    // Align vertically inside the background
 
-		// Draw the filled progress bar
-		H::Draw.FillRect(iPosX, iPosY, progressWidth, iSizeY, Vars::Menu::Theme::Accent.Value);
+		// Draw the filled progress bar with rounded corners
+		H::Draw.FillRoundRect(progressPosX, progressPosY, progressSizeX * flRatio, progressSizeY, cornerRadius, Vars::Menu::Theme::Accent.Value);
 	}
 }
+
 
 void CVisuals::DrawPing(CTFPlayer* pLocal)
 {
