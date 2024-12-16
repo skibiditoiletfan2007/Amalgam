@@ -1,7 +1,5 @@
 #include "Visuals.h"
 
-#include <cmath>
-#include <algorithm>
 #include "../Aimbot/Aimbot.h"
 #include "../Visuals/PlayerConditions/PlayerConditions.h"
 #include "../Backtrack/Backtrack.h"
@@ -11,13 +9,15 @@
 #include "../NoSpread/NoSpreadHitscan/NoSpreadHitscan.h"
 #include "../Players/PlayerUtils.h"
 #include "Materials/Materials.h"
+#include "../Spectate/Spectate.h"
+#include "../TickHandler/TickHandler.h"
 
 MAKE_SIGNATURE(RenderLine, "engine.dll", "48 89 5C 24 ? 48 89 74 24 ? 44 89 44 24", 0x0);
 MAKE_SIGNATURE(RenderBox, "engine.dll", "48 83 EC ? 8B 84 24 ? ? ? ? 4D 8B D8", 0x0);
 MAKE_SIGNATURE(RenderWireframeBox, "engine.dll", "48 89 5C 24 ? 48 89 74 24 ? 48 89 7C 24 ? 55 41 54 41 55 41 56 41 57 48 8D AC 24 ? ? ? ? 48 81 EC ? ? ? ? 49 8B F9", 0x0);
 MAKE_SIGNATURE(DrawServerHitboxes, "server.dll", "44 88 44 24 ? 53 48 81 EC", 0x0);
 MAKE_SIGNATURE(GetServerAnimating, "server.dll", "48 83 EC ? 8B D1 85 C9 7E ? 48 8B 05", 0x0);
-MAKE_SIGNATURE(CTFPlayer_FireEvent, "client.dll", "48 8B C4 48 89 58 ? 48 89 70 ? 48 89 78 ? 55 41 54 41 57", 0x0);
+MAKE_SIGNATURE(CTFPlayer_FireEvent, "client.dll", "48 89 5C 24 ? 48 89 74 24 ? 48 89 7C 24 ? 4C 89 64 24 ? 55 41 56 41 57 48 8D 6C 24", 0x0);
 MAKE_SIGNATURE(CWeaponMedigun_UpdateEffects, "client.dll", "40 57 48 81 EC ? ? ? ? 8B 91 ? ? ? ? 48 8B F9 85 D2 0F 84 ? ? ? ? 48 89 B4 24", 0x0);
 MAKE_SIGNATURE(CWeaponMedigun_StopChargeEffect, "client.dll", "40 53 48 83 EC ? 44 0F B6 C2", 0x0);
 MAKE_SIGNATURE(CWeaponMedigun_ManageChargeEffect, "client.dll", "48 89 5C 24 ? 48 89 74 24 ? 57 48 81 EC ? ? ? ? 48 8B F1 E8 ? ? ? ? 48 8B D8", 0x0);
@@ -49,49 +49,46 @@ void CVisuals::DrawTicks(CTFPlayer* pLocal)
 	const DragBox_t dtPos = Vars::Menu::TicksDisplay.Value;
 	const auto& fFont = H::Fonts.GetFont(FONT_INDICATORS);
 
-	// Calculate the ticks and progress ratio
-	int iTicks = G::ShiftedTicks + G::ChokeAmount;
-	float flRatio = float(std::clamp(iTicks, 0, G::MaxShift)) / G::MaxShift;
+	// Calculate the ticks and progress ratio using new logic
+	int iChoke = std::max(I::ClientState->chokedcommands - (F::AntiAim.YawOn() ? F::AntiAim.AntiAimTicks() : 0), 0);
+	int iTicks = std::clamp(F::Ticks.m_iShiftedTicks + iChoke, 0, F::Ticks.m_iMaxShift);
+	float flRatio = float(iTicks) / F::Ticks.m_iMaxShift;
 
-	// Adjust the size of the progress bar and background
-	int iSizeX = H::Draw.Scale(100, Scale_Round); // Slightly reduced width of the background
-	int iSizeY = H::Draw.Scale(13, Scale_Round);  // Keep the height as it is
+	// Dimensions for the progress bar
+	int iSizeX = H::Draw.Scale(100, Scale_Round);  // Width
+	int iSizeY = H::Draw.Scale(13, Scale_Round);   // Height
+	int iPosX = dtPos.x - iSizeX / 2;              // Centered X position
+	int iPosY = dtPos.y + fFont.m_nTall + H::Draw.Scale(4); // Adjusted Y position
 
-	int iPosX = dtPos.x - iSizeX / 2;             // Center horizontally
-	int iPosY = dtPos.y + fFont.m_nTall + H::Draw.Scale(4); // Adjusted for alignment
-
-	// Corner radius for rounded edges
+	// Rounded corner radius
 	int cornerRadius = H::Draw.Scale(5, Scale_Round);
 
-	// Draw the tick count text
+	// Draw tick count text
 	H::Draw.String(fFont, dtPos.x, dtPos.y + 2,
-		Vars::Menu::Theme::Active.Value,
-		ALIGN_TOP, std::format("Ticks {} / {}", iTicks, G::MaxShift).c_str());
+		Vars::Menu::Theme::Active.Value, ALIGN_TOP,
+		std::format("Ticks {} / {}", iTicks, F::Ticks.m_iMaxShift).c_str());
 
-	if (G::WaitForShift)
+	// Display "Not Ready" if waiting for shift
+	if (F::Ticks.m_iWait)
 	{
 		H::Draw.String(fFont, dtPos.x, dtPos.y + fFont.m_nTall + H::Draw.Scale(18, Scale_Round),
-			Vars::Menu::Theme::Active.Value,
-			ALIGN_TOP, "Not Ready");
+			Vars::Menu::Theme::Active.Value, ALIGN_TOP, "Not Ready");
 	}
 
-	// Draw the background of the progress bar with rounded corners
+	// Draw the background of the progress bar
 	H::Draw.FillRoundRect(iPosX, iPosY, iSizeX, iSizeY, cornerRadius, Vars::Menu::Theme::Background.Value);
 
-	// Draw the progress bar if the ratio is greater than 0
+	// Draw the progress bar based on ratio
 	if (flRatio > 0.0f)
 	{
-		// Adjust the size and position for the progress indicator
-		int progressSizeX = iSizeX - 4;  // Slightly smaller width to fit inside the background
-		int progressSizeY = iSizeY - 4;  // Slightly smaller height
-		int progressPosX = iPosX + 2;    // Adjust to center inside the background
-		int progressPosY = iPosY + 2;    // Align vertically inside the background
+		int progressSizeX = iSizeX - H::Draw.Scale(4, Scale_Round);
+		int progressSizeY = iSizeY - H::Draw.Scale(4, Scale_Round);
+		int progressPosX = iPosX + H::Draw.Scale(2, Scale_Round);
+		int progressPosY = iPosY + H::Draw.Scale(2, Scale_Round);
 
-		// Draw the filled progress bar with rounded corners
 		H::Draw.FillRoundRect(progressPosX, progressPosY, progressSizeX * flRatio, progressSizeY, cornerRadius, Vars::Menu::Theme::Accent.Value);
 	}
 }
-
 
 void CVisuals::DrawPing(CTFPlayer* pLocal)
 {
@@ -165,21 +162,39 @@ static std::deque<Vec3> SplashTrace(Vec3 vOrigin, float flRadius, Vec3 vNormal =
 	return vPoints;
 }
 
-void CVisuals::ProjectileTrace(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, const bool bQuick)
+void CVisuals::ProjectileTrace(CTFPlayer* pPlayer, CTFWeaponBase* pWeapon, const bool bQuick)
 {
 	if (bQuick)
 		F::CameraWindow.m_bShouldDraw = false;
 	if ((bQuick ? !Vars::Visuals::Simulation::TrajectoryPath.Value && !Vars::Visuals::Simulation::ProjectileCamera.Value : !Vars::Visuals::Simulation::ShotPath.Value)
-		|| !pLocal || !pWeapon || pWeapon->GetWeaponID() == TF_WEAPON_FLAMETHROWER)
+		|| !pPlayer || !pWeapon || pWeapon->GetWeaponID() == TF_WEAPON_FLAMETHROWER)
 		return;
 
+	Vec3 vAngles = bQuick ? I::EngineClient->GetViewAngles() : G::CurrentUserCmd->viewangles;
+	int iFlags = bQuick ? ProjSim_Trace | ProjSim_InitCheck | ProjSim_Quick : ProjSim_Trace | ProjSim_InitCheck;
+	if (bQuick && F::Spectate.m_iTarget != -1)
+	{
+		pPlayer = I::ClientEntityList->GetClientEntity(I::EngineClient->GetPlayerForUserID(F::Spectate.m_iTarget))->As<CTFPlayer>();
+		if (!pPlayer || pPlayer->IsDormant())
+			return;
+
+		pWeapon = pPlayer->m_hActiveWeapon().Get()->As<CTFWeaponBase>();
+		if (!pWeapon)
+			return;
+
+		if (I::Input->CAM_IsThirdPerson())
+			vAngles = pPlayer->GetEyeAngles();
+
+		pPlayer->m_vecViewOffset() = pPlayer->GetViewOffset();
+	}
+
 	ProjectileInfo projInfo = {};
-	if (!F::ProjSim.GetInfo(pLocal, pWeapon, bQuick ? I::EngineClient->GetViewAngles() : G::CurrentUserCmd->viewangles, projInfo, bQuick ? ProjSim_Trace | ProjSim_InitCheck | ProjSim_Quick : ProjSim_Trace | ProjSim_InitCheck, (bQuick && Vars::Aimbot::Projectile::AutoRelease.Value) ? Vars::Aimbot::Projectile::AutoRelease.Value / 100 : -1.f)
+	if (!F::ProjSim.GetInfo(pPlayer, pWeapon, vAngles, projInfo, iFlags, (bQuick && Vars::Aimbot::Projectile::AutoRelease.Value) ? Vars::Aimbot::Projectile::AutoRelease.Value / 100 : -1.f)
 		|| !F::ProjSim.Initialize(projInfo))
 		return;
 
 	CGameTrace trace = {};
-	CTraceFilterProjectile filter = {}; filter.pSkip = pLocal;
+	CTraceFilterProjectile filter = {}; filter.pSkip = pPlayer;
 	Vec3* pNormal = nullptr;
 
 	for (int n = 1; n <= TIME_TO_TICKS(projInfo.m_flLifetime); n++)
@@ -226,22 +241,25 @@ void CVisuals::ProjectileTrace(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, const 
 
 		if (flRadius)
 		{
+			Vec3 vEndPos = trace.endpos;
 			flRadius = SDK::AttribHookValue(flRadius, "mult_explosion_radius", pWeapon);
 			switch (pWeapon->GetWeaponID())
 			{
 			case TF_WEAPON_ROCKETLAUNCHER:
 			case TF_WEAPON_ROCKETLAUNCHER_DIRECTHIT:
 			case TF_WEAPON_PARTICLE_CANNON:
-				if (pLocal->InCond(TF_COND_BLASTJUMPING) && SDK::AttribHookValue(1.f, "rocketjump_attackrate_bonus", pWeapon) != 1.f)
+				if (pNormal)
+					vEndPos += *pNormal;
+				if (pPlayer->InCond(TF_COND_BLASTJUMPING) && SDK::AttribHookValue(1.f, "rocketjump_attackrate_bonus", pWeapon) != 1.f)
 					flRadius *= 0.8f;
 			}
-			vPoints = SplashTrace(trace.endpos, flRadius, pNormal ? *pNormal : Vec3(0, 0, 1), Vars::Visuals::Simulation::SplashRadius.Value & Vars::Visuals::Simulation::SplashRadiusEnum::Trace);
+			vPoints = SplashTrace(vEndPos, flRadius, pNormal ? *pNormal : Vec3(0, 0, 1), Vars::Visuals::Simulation::SplashRadius.Value & Vars::Visuals::Simulation::SplashRadiusEnum::Trace);
 		}
 	}
 
 	if (bQuick)
 	{
-		if (Vars::Visuals::Simulation::ProjectileCamera.Value && !I::EngineVGui->IsGameUIVisible() && pLocal->m_vecOrigin().DistTo(trace.endpos) > 500.f)
+		if (Vars::Visuals::Simulation::ProjectileCamera.Value && !I::EngineVGui->IsGameUIVisible() && pPlayer->m_vecOrigin().DistTo(trace.endpos) > 500.f)
 		{
 			CGameTrace cameraTrace = {};
 
@@ -368,8 +386,9 @@ void CVisuals::SplashRadius(CTFPlayer* pLocal)
 			continue;
 		else if (pOwner->entindex() != I::EngineClient->GetLocalPlayer())
 		{
-			if (!(Vars::Visuals::Simulation::SplashRadius.Value & Vars::Visuals::Simulation::SplashRadiusEnum::Friends && H::Entities.IsFriend(pOwner->entindex()))
-				&& !(Vars::Visuals::Simulation::SplashRadius.Value & Vars::Visuals::Simulation::SplashRadiusEnum::Priority && F::PlayerUtils.GetPriority(pOwner->entindex()) > F::PlayerUtils.m_vTags[DEFAULT_TAG].Priority)
+			if (!(Vars::Visuals::Simulation::SplashRadius.Value & Vars::Visuals::Simulation::SplashRadiusEnum::Priority && F::PlayerUtils.IsPrioritized(pOwner->entindex()))
+				&& !(Vars::Visuals::Simulation::SplashRadius.Value & Vars::Visuals::Simulation::SplashRadiusEnum::Friends && H::Entities.IsFriend(pOwner->entindex()))
+				&& !(Vars::Visuals::Simulation::SplashRadius.Value & Vars::Visuals::Simulation::SplashRadiusEnum::Party && H::Entities.InParty(pOwner->entindex()))
 				&& pOwner->m_iTeamNum() == pLocal->m_iTeamNum() ? !(Vars::Visuals::Simulation::SplashRadius.Value & Vars::Visuals::Simulation::SplashRadiusEnum::Team) : !(Vars::Visuals::Simulation::SplashRadius.Value & Vars::Visuals::Simulation::SplashRadiusEnum::Enemy))
 				continue;
 		}
@@ -457,24 +476,24 @@ void CVisuals::DrawDebugInfo(CTFPlayer* pLocal)
 
 		if (pCmd)
 		{
-			H::Draw.String(fFont, x, y += nTall, {}, ALIGN_TOPLEFT, std::format("View: ({:.3f}, {:.3f}, {:.3f})", pCmd->viewangles.x, pCmd->viewangles.y, pCmd->viewangles.z).c_str());
-			H::Draw.String(fFont, x, y += nTall, {}, ALIGN_TOPLEFT, std::format("Move: ({}, {}, {})", pCmd->forwardmove, pCmd->sidemove, pCmd->upmove).c_str());
-			H::Draw.String(fFont, x, y += nTall, {}, ALIGN_TOPLEFT, std::format("Buttons: {}", pCmd->buttons).c_str());
+			H::Draw.String(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, ALIGN_TOPLEFT, std::format("View: ({:.3f}, {:.3f}, {:.3f})", pCmd->viewangles.x, pCmd->viewangles.y, pCmd->viewangles.z).c_str());
+			H::Draw.String(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, ALIGN_TOPLEFT, std::format("Move: ({}, {}, {})", pCmd->forwardmove, pCmd->sidemove, pCmd->upmove).c_str());
+			H::Draw.String(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, ALIGN_TOPLEFT, std::format("Buttons: {}", pCmd->buttons).c_str());
 		}
 		{
 			Vec3 vOrigin = pLocal->m_vecOrigin();
-			H::Draw.String(fFont, x, y += nTall, {}, ALIGN_TOPLEFT, std::format("Origin: ({:.3f}, {:.3f}, {:.3f})", vOrigin.x, vOrigin.y, vOrigin.z).c_str());
+			H::Draw.String(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, ALIGN_TOPLEFT, std::format("Origin: ({:.3f}, {:.3f}, {:.3f})", vOrigin.x, vOrigin.y, vOrigin.z).c_str());
 		}
 		{
 			Vec3 vVelocity = pLocal->m_vecVelocity();
-			H::Draw.String(fFont, x, y += nTall, {}, ALIGN_TOPLEFT, std::format("Velocity: {:.3f} ({:.3f}, {:.3f}, {:.3f})", vVelocity.Length(), vVelocity.x, vVelocity.y, vVelocity.z).c_str());
+			H::Draw.String(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, ALIGN_TOPLEFT, std::format("Velocity: {:.3f} ({:.3f}, {:.3f}, {:.3f})", vVelocity.Length(), vVelocity.x, vVelocity.y, vVelocity.z).c_str());
 		}
-		H::Draw.String(fFont, x, y += nTall, {}, ALIGN_TOPLEFT, std::format("Choke: {}, {}", G::Choking, I::ClientState->chokedcommands).c_str());
-		H::Draw.String(fFont, x, y += nTall, {}, ALIGN_TOPLEFT, std::format("Ticks: {}, {}", G::ShiftedTicks, G::ShiftedGoal).c_str());
-		H::Draw.String(fFont, x, y += nTall, {}, ALIGN_TOPLEFT, std::format("Round state: {}", SDK::GetRoundState()).c_str());
-		H::Draw.String(fFont, x, y += nTall, {}, ALIGN_TOPLEFT, std::format("Tickcount: {}", pLocal->m_nTickBase()).c_str());
-		H::Draw.String(fFont, x, y += nTall, {}, ALIGN_TOPLEFT, std::format("Entities: {} ({}, {})", I::ClientEntityList->GetMaxEntities(), I::ClientEntityList->GetHighestEntityIndex(), I::ClientEntityList->NumberOfEntities(false)).c_str());
-
+		H::Draw.String(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, ALIGN_TOPLEFT, std::format("Choke: {}, {}", G::Choking, I::ClientState->chokedcommands).c_str());
+		H::Draw.String(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, ALIGN_TOPLEFT, std::format("Ticks: {}, {}", F::Ticks.m_iShiftedTicks, F::Ticks.m_iShiftedGoal).c_str());
+		H::Draw.String(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, ALIGN_TOPLEFT, std::format("Round state: {}", SDK::GetRoundState()).c_str());
+		H::Draw.String(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, ALIGN_TOPLEFT, std::format("Tickcount: {}", pLocal->m_nTickBase()).c_str());
+		H::Draw.String(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, ALIGN_TOPLEFT, std::format("Entities: {} ({}, {})", I::ClientEntityList->GetMaxEntities(), I::ClientEntityList->GetHighestEntityIndex(), I::ClientEntityList->NumberOfEntities(false)).c_str());
+	
 		if (!pWeapon || !pCmd)
 			return;
 
@@ -483,11 +502,11 @@ void CVisuals::DrawDebugInfo(CTFPlayer* pLocal)
 		float flSecondaryAttack = pWeapon->m_flNextSecondaryAttack();
 		float flAttack = pLocal->m_flNextAttack();
 
-		H::Draw.String(fFont, x, y += nTall * 2, {}, ALIGN_TOPLEFT, std::format("Attacking: {} ({})", G::Attacking, bool(pCmd->buttons & IN_ATTACK)).c_str());
-		H::Draw.String(fFont, x, y += nTall, {}, ALIGN_TOPLEFT, std::format("CanPrimaryAttack: {} ([{:.3f} | {:.3f}] <= {:.3f})", G::CanPrimaryAttack, flPrimaryAttack, flAttack, flTime).c_str());
-		H::Draw.String(fFont, x, y += nTall, {}, ALIGN_TOPLEFT, std::format("CanSecondaryAttack: {} ([{:.3f} | {:.3f}] <= {:.3f})", G::CanSecondaryAttack, flSecondaryAttack, flAttack, flTime).c_str());
-		H::Draw.String(fFont, x, y += nTall, {}, ALIGN_TOPLEFT, std::format("Attack: {:.3f}, {:.3f}; {:.3f}", flTime - flPrimaryAttack, flTime - flSecondaryAttack, flTime - flAttack).c_str());
-		H::Draw.String(fFont, x, y += nTall, {}, ALIGN_TOPLEFT, std::format("Reload: {} ({} || {} != 0)", G::Reloading, pWeapon->m_bInReload(), pWeapon->m_iReloadMode()).c_str());
+		H::Draw.String(fFont, x, y += nTall * 2, Vars::Menu::Theme::Active.Value, ALIGN_TOPLEFT, std::format("Attacking: {}", G::Attacking).c_str());
+		H::Draw.String(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, ALIGN_TOPLEFT, std::format("CanPrimaryAttack: {} ([{:.3f} | {:.3f}] <= {:.3f})", G::CanPrimaryAttack, flPrimaryAttack, flAttack, flTime).c_str());
+		H::Draw.String(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, ALIGN_TOPLEFT, std::format("CanSecondaryAttack: {} ([{:.3f} | {:.3f}] <= {:.3f})", G::CanSecondaryAttack, flSecondaryAttack, flAttack, flTime).c_str());
+		H::Draw.String(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, ALIGN_TOPLEFT, std::format("Attack: {:.3f}, {:.3f}; {:.3f}", flTime - flPrimaryAttack, flTime - flSecondaryAttack, flTime - flAttack).c_str());
+		H::Draw.String(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, ALIGN_TOPLEFT, std::format("Reload: {} ({} || {} != 0)", G::Reloading, pWeapon->m_bInReload(), pWeapon->m_iReloadMode()).c_str());
 	}
 }
 
@@ -532,190 +551,10 @@ std::vector<DrawBox> CVisuals::GetHitboxes(matrix3x4 aBones[MAXSTUDIOBONES], CBa
 	return vBoxes;
 }
 
-// Helper function to convert HSV to RGB color
-Color_t ColorFromHSV(float hue, float saturation, float value) {
-	int h = static_cast<int>(hue / 60) % 6;
-	float f = hue / 60 - h;
-	float p = value * (1 - saturation);
-	float q = value * (1 - f * saturation);
-	float t = value * (1 - (1 - f) * saturation);
-
-	float r, g, b;
-	switch (h) {
-	case 0: r = value; g = t; b = p; break;
-	case 1: r = q; g = value; b = p; break;
-	case 2: r = p; g = value; b = t; break;
-	case 3: r = p; g = q; b = value; break;
-	case 4: r = t; g = p; b = value; break;
-	case 5: r = value; g = p; b = q; break;
-	}
-	return Color_t(static_cast<int>(r * 255), static_cast<int>(g * 255), static_cast<int>(b * 255), 255);
-}
-
-// Function to manually normalize a vector
-Vec3 Normalize(const Vec3& vec) {
-	float length = sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
-	if (length == 0) return Vec3(0, 0, 0); // Avoid division by zero
-	return Vec3(vec.x / length, vec.y / length, vec.z / length);
-}
-
-void CVisuals::DrawPath(std::deque<Vec3>& Line, Color_t Color, int iStyle, bool bZBuffer, float flTime) {
-	if (iStyle == Vars::Visuals::Simulation::StyleEnum::Off || Line.size() < 2) {
-		return;  // Early exit if no valid style is selected or not enough points
-	}
-
-	if (iStyle == Vars::Visuals::Simulation::StyleEnum::VelocityPath) {
-		// Velocity-based coloring for the Separators style
-		for (size_t i = 1; i < Line.size(); ++i) {
-			Vec3 velocity = Line[i] - Line[i - 1];
-			float speed = sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
-
-			// Map speed to color: red (0.0) to green (120.0)
-			float hue = (speed >= 3.0f) ? 120.0f : (speed <= 0.0f) ? 0.0f : speed * 40.0f;
-			Color_t speedColor = ColorFromHSV(hue, 1.0f, 1.0f);
-
-			// Draw the line segment with speed-based color
-			RenderLine(Line[i - 1], Line[i], speedColor, bZBuffer);
-
-			float minSize = 0.0f;
-			float maxSize = 9.0f;
-			float separatorSize = ((speed / 6.0f) * (maxSize - minSize)) + minSize;
-			separatorSize = fmin(separatorSize, maxSize + 2.0f);
-
-			if (i % 4 == 0 && separatorSize > 0.0f) {
-				Vec3 vSeparator = velocity;
-				vSeparator.z = 0;
-				vSeparator = Normalize(vSeparator);
-				vSeparator = Math::RotatePoint(vSeparator * separatorSize, {}, { 0, 90, 0 });
-				RenderLine(Line[i], Line[i] + vSeparator, speedColor, bZBuffer);
-			}
-
-			if (i % 4 == 0 && separatorSize > 0.0f) {
-				Vec3 vAdditionalSeparator = velocity;
-				vAdditionalSeparator.z = 0;
-				vAdditionalSeparator = Normalize(vAdditionalSeparator);
-				vAdditionalSeparator = Math::RotatePoint(vAdditionalSeparator * (separatorSize + 1.0f), {}, { 0, 90, 0 });
-				RenderLine(Line[i], Line[i] + vAdditionalSeparator, speedColor, bZBuffer);
-			}
-		}
-	}
-
-	if ( iStyle == Vars::Visuals::Simulation::StyleEnum::Nitro )
-	{
-		// Define green color for the impact box
-		Color_t Green = { 0, 255, 0, 255 }; // RGBA for green
-		float BoxSize = Vars::Visuals::Simulation::BoxSize.Value;
-
-		Vec3 FirstPoint = Line[ 0 ];
-		Vec3 LastPoint = Line[ Line.size( ) - 1 ];
-
-		//yaw never changes on a projectile once it has been spawned
-		Vec3 Angle = Math::CalcAngle( FirstPoint, LastPoint, false );
-		Angle.x = 0.f;
-
-		//base the prism orientation off of our yaw
-		Vec3 Forward, Right, Up;
-		Math::AngleVectors( Angle, &Forward, &Right, &Up );
-
-		//cube points
-		Vec3 ForwardRightTop = ( Forward /** BoxSize*/ ) + ( Right * BoxSize ) + ( Up * BoxSize );
-		Vec3 ForwardRightDown = ( Forward /** BoxSize*/ ) + ( Right * BoxSize ) + ( Up * -BoxSize );
-		Vec3 ForwardLeftTop = ( Forward /** BoxSize*/ ) + ( Right * -BoxSize ) + ( Up * BoxSize );
-		Vec3 ForwardLeftDown = ( Forward /** BoxSize*/ ) + ( Right * -BoxSize ) + ( Up * -BoxSize );
-
-		Vec3 BackRightTop = ( Forward /** -BoxSize*/ ) + ( Right * BoxSize ) + ( Up * BoxSize );
-		Vec3 BackRightDown = ( Forward /** -BoxSize*/ ) + ( Right * BoxSize ) + ( Up * -BoxSize );
-		Vec3 BackLeftTop = ( Forward /** -BoxSize*/ ) + ( Right * -BoxSize ) + ( Up * BoxSize );
-		Vec3 BackLeftDown = ( Forward /** -BoxSize*/ ) + ( Right * -BoxSize ) + ( Up * -BoxSize );
-
-		//hexagonal prism points
-		Vec3 ForwardTopHexagonal = ( Forward * BoxSize ) + ( Right ) + ( Up * BoxSize );
-		Vec3 ForwardDownHexagonal = ( Forward * BoxSize ) + ( Right ) + ( Up * -BoxSize );
-		Vec3 BackTopHexagonal = ( Forward * -BoxSize ) + ( Right ) + ( Up * BoxSize );
-		Vec3 BackDownHexagonal = ( Forward * -BoxSize ) + ( Right ) + ( Up * -BoxSize );
-
-		Vec3 StartPoint = Vec3( );
-		Vec3 PrevStartPoint = Vec3( );
-		Vec3 Difference = Vec3( );
-		bool Transition = false;
-
-		for ( size_t i = 1; i < Line.size( ); i++ )
-		{
-			if ( flTime < 0.f && Line.size( ) - i > -flTime )
-				continue;
-
-			Vec3 Point = Line[ i ];
-			Vec3 PrevPoint = Line[ i - 1 ];
-			if ( i == 1 )
-			{
-				StartPoint = PrevPoint + Vec3( 0.f, 0.f, BoxSize );
-			}
-
-			//if our height goes out of bounds, render the prism containing points inside of it
-			//ISSUE: small gaps between prisms due to point displacement
-			//potential fix: interpolate projectile positions?
-			if ( PrevPoint.z > StartPoint.z + BoxSize )
-			{
-				PrevStartPoint = StartPoint;
-				StartPoint = PrevPoint + Vec3( 0.f, 0.f, BoxSize );
-				Difference = StartPoint - PrevStartPoint;
-				Difference.z = 0.f;
-				Transition = true;
-			}
-
-			if ( PrevPoint.z < StartPoint.z - BoxSize )
-			{
-				PrevStartPoint = StartPoint;
-				StartPoint = PrevPoint - Vec3( 0.f, 0.f, BoxSize );
-				Difference = StartPoint - PrevStartPoint;
-				Difference.z = 0.f;
-				Transition = true;
-			}
-
-			if ( Transition )
-			{
-				//front face
-				//RenderLine( PrevStartPoint + Difference + ForwardLeftTop, PrevStartPoint + Difference + ForwardRightTop, Green, bZBuffer );
-				//RenderLine( PrevStartPoint + Difference + ForwardLeftDown, PrevStartPoint + Difference + ForwardRightDown, Green, bZBuffer );
-				RenderLine( PrevStartPoint + Difference + ForwardRightTop, PrevStartPoint + Difference + ForwardRightDown, Green, bZBuffer );
-				RenderLine( PrevStartPoint + Difference + ForwardLeftTop, PrevStartPoint + Difference + ForwardLeftDown, Green, bZBuffer );
-
-				//front hexagonal prism lines
-				RenderLine( PrevStartPoint + Difference + ForwardLeftTop, PrevStartPoint + Difference + ForwardTopHexagonal, 
-							Green, bZBuffer );
-				RenderLine( PrevStartPoint + Difference + ForwardRightTop, PrevStartPoint + Difference + ForwardTopHexagonal,
-							Green, bZBuffer );
-				RenderLine( PrevStartPoint + Difference + ForwardLeftDown, PrevStartPoint + Difference + ForwardDownHexagonal,
-							Green, bZBuffer );
-				RenderLine( PrevStartPoint + Difference + ForwardRightDown, PrevStartPoint + Difference + ForwardDownHexagonal,
-							Green, bZBuffer );
-				RenderLine( PrevStartPoint + Difference + ForwardTopHexagonal, PrevStartPoint + Difference + ForwardDownHexagonal,
-							Green, bZBuffer );
-
-				//back face
-				//RenderLine( PrevStartPoint + BackLeftTop, PrevStartPoint + BackRightTop, Green, bZBuffer );
-				//RenderLine( PrevStartPoint + BackLeftDown, PrevStartPoint + BackRightDown, Green, bZBuffer );
-				RenderLine( PrevStartPoint + BackRightTop, PrevStartPoint + BackRightDown, Green, bZBuffer );
-				RenderLine( PrevStartPoint + BackLeftTop, PrevStartPoint + BackLeftDown, Green, bZBuffer );
-
-				//back hexagonal prism lines
-				RenderLine( PrevStartPoint + BackLeftTop, PrevStartPoint + BackTopHexagonal, Green, bZBuffer );
-				RenderLine( PrevStartPoint + BackRightTop, PrevStartPoint + BackTopHexagonal, Green, bZBuffer );
-				RenderLine( PrevStartPoint + BackLeftDown, PrevStartPoint + BackDownHexagonal, Green, bZBuffer );
-				RenderLine( PrevStartPoint + BackRightDown, PrevStartPoint + BackDownHexagonal, Green, bZBuffer );
-				RenderLine( PrevStartPoint + BackTopHexagonal, PrevStartPoint + BackDownHexagonal, Green, bZBuffer );
-
-				//connecting lines
-				RenderLine( PrevStartPoint + Difference + ForwardLeftTop, PrevStartPoint + BackLeftTop, Green, bZBuffer );
-				RenderLine( PrevStartPoint + Difference + ForwardRightTop, PrevStartPoint + BackRightTop, Green, bZBuffer );
-				RenderLine( PrevStartPoint + Difference + ForwardLeftDown, PrevStartPoint + BackLeftDown, Green, bZBuffer );
-				RenderLine( PrevStartPoint + Difference + ForwardRightDown, PrevStartPoint + BackRightDown, Green, bZBuffer );
-				Transition = false;
-			}
-		}
-
+void CVisuals::DrawPath(std::deque<Vec3>& Line, Color_t Color, int iStyle, bool bZBuffer, float flTime)
+{
+	if (iStyle == Vars::Visuals::Simulation::StyleEnum::Off)
 		return;
-	}
 
 	for (size_t i = 1; i < Line.size(); i++)
 	{
@@ -737,22 +576,21 @@ void CVisuals::DrawPath(std::deque<Vec3>& Line, Color_t Color, int iStyle, bool 
 				Vec3& vStart = Line[i - 1];
 				Vec3& vEnd = Line[i];
 
-				Vec3 vSeparator = vEnd - vStart;
-				vSeparator.z = 0;
-				vSeparator.Normalize();
-				vSeparator = Math::RotatePoint(vSeparator * Vars::Visuals::Simulation::SeparatorLength.Value, {}, { 0, 90, 0 });
-				RenderLine(vEnd, vEnd + vSeparator, Color, bZBuffer);
+				Vec3 vDir = vEnd - vStart;
+				vDir.z = 0;
+				vDir.Normalize();
+				vDir = Math::RotatePoint(vDir * Vars::Visuals::Simulation::SeparatorLength.Value, {}, { 0, 90, 0 });
+				RenderLine(vEnd, vEnd + vDir, Color, bZBuffer);
 			}
 			break;
 		}
-
 		case Vars::Visuals::Simulation::StyleEnum::Spaced:
 		{
 			if (!(i % 2))
 				RenderLine(Line[i - 1], Line[i], Color, bZBuffer);
 			break;
 		}
-		case Vars::Visuals::Simulation::StyleEnum::Arrow:
+		case Vars::Visuals::Simulation::StyleEnum::Arrows:
 		{
 			if (!(i % 3))
 			{
@@ -761,116 +599,23 @@ void CVisuals::DrawPath(std::deque<Vec3>& Line, Color_t Color, int iStyle, bool 
 
 				if (!(vStart - vEnd).IsZero())
 				{
-					// Calculate velocity magnitude
-					float velocity = (vEnd - vStart).Length();
-
-					// Debug: Log velocity
-					printf("Velocity: %f\n", velocity);
-
-					// Define minimum and maximum arrow sizes
-					float minSize = 3.0f;  // Smallest arrow size
-					float maxSize = 10.0f; // Largest arrow size
-
-					// Adjust scaling factor for better visibility during testing
-					float scalingFactor = 0.5f; // Increase this if arrows don't change size noticeably
-
-					// Map velocity to a size range
-					float arrowSize = std::clamp(minSize + (velocity * scalingFactor), minSize, maxSize);
-
-					// Debug: Log arrow size
-					printf("Arrow size: %f\n", arrowSize);
-
-					// Calculate arrow direction vectors
-					Vec3 vAngles;
-					Math::VectorAngles(vEnd - vStart, vAngles);
-					Vec3 vForward, vRight, vUp;
-					Math::AngleVectors(vAngles, &vForward, &vRight, &vUp);
-
-					// Draw the arrow
-					RenderLine(vEnd, vEnd - vForward * arrowSize + vRight * arrowSize, Color, bZBuffer);
-					RenderLine(vEnd, vEnd - vForward * arrowSize - vRight * arrowSize, Color, bZBuffer);
+					Vec3 vAngles; Math::VectorAngles(vEnd - vStart, vAngles);
+					Vec3 vForward, vRight, vUp; Math::AngleVectors(vAngles, &vForward, &vRight, &vUp);
+					RenderLine(vEnd, vEnd - vForward * 5 + vRight * 5, Color, bZBuffer);
+					RenderLine(vEnd, vEnd - vForward * 5 - vRight * 5, Color, bZBuffer);
+					// this also looked interesting but i'm not sure i'd actually add it
+					//RenderLine(vEnd, vEnd + vForward * 5, Color, bZBuffer);
+					//RenderLine(vEnd, vEnd + vRight * 5, Color, bZBuffer);
+					//RenderLine(vEnd, vEnd + vUp * 5, Color, bZBuffer);
 				}
 			}
 			break;
 		}
-
 		case Vars::Visuals::Simulation::StyleEnum::Boxes:
 		{
 			RenderLine(Line[i - 1], Line[i], Color, bZBuffer);
 			if (!(i % Vars::Visuals::Simulation::SeparatorSpacing.Value))
-			{
-				Vec3 vCenter = Line[i];
-				float boxSize = 1.0f;
-
-				Vec3 vOffsets[] = {
-					{ -boxSize, -boxSize, -boxSize },
-					{  boxSize, -boxSize, -boxSize },
-					{ -boxSize,  boxSize, -boxSize },
-					{  boxSize,  boxSize, -boxSize },
-					{ -boxSize, -boxSize,  boxSize },
-					{  boxSize, -boxSize,  boxSize },
-					{ -boxSize,  boxSize,  boxSize },
-					{  boxSize,  boxSize,  boxSize }
-				};
-
-				RenderLine(vCenter + vOffsets[0], vCenter + vOffsets[1], Color, bZBuffer);
-				RenderLine(vCenter + vOffsets[1], vCenter + vOffsets[3], Color, bZBuffer);
-				RenderLine(vCenter + vOffsets[3], vCenter + vOffsets[2], Color, bZBuffer);
-				RenderLine(vCenter + vOffsets[2], vCenter + vOffsets[0], Color, bZBuffer);
-
-				RenderLine(vCenter + vOffsets[4], vCenter + vOffsets[5], Color, bZBuffer);
-				RenderLine(vCenter + vOffsets[5], vCenter + vOffsets[7], Color, bZBuffer);
-				RenderLine(vCenter + vOffsets[7], vCenter + vOffsets[6], Color, bZBuffer);
-				RenderLine(vCenter + vOffsets[6], vCenter + vOffsets[4], Color, bZBuffer);
-
-				RenderLine(vCenter + vOffsets[0], vCenter + vOffsets[4], Color, bZBuffer);
-				RenderLine(vCenter + vOffsets[1], vCenter + vOffsets[5], Color, bZBuffer);
-				RenderLine(vCenter + vOffsets[2], vCenter + vOffsets[6], Color, bZBuffer);
-				RenderLine(vCenter + vOffsets[3], vCenter + vOffsets[7], Color, bZBuffer);
-			}
-			break;
-		}
-		case Vars::Visuals::Simulation::StyleEnum::ImpactBox:
-		{
-			// Draw the line between all points
-			RenderLine(Line[i - 1], Line[i], Color, bZBuffer);
-
-			// Draw a green 3D box at the last point
-			if (i == Line.size() - 1) // Check if it's the last point
-			{
-				Vec3 vCenter = Line[i];
-				float boxSize = 2.0f; // Size of the box
-
-				// Define green color for the impact box
-				Color_t Green = { 0, 255, 0, 255 }; // RGBA for green
-
-				Vec3 vOffsets[] = {
-					{ -boxSize, -boxSize, -boxSize },
-					{  boxSize, -boxSize, -boxSize },
-					{ -boxSize,  boxSize, -boxSize },
-					{  boxSize,  boxSize, -boxSize },
-					{ -boxSize, -boxSize,  boxSize },
-					{  boxSize, -boxSize,  boxSize },
-					{ -boxSize,  boxSize,  boxSize },
-					{  boxSize,  boxSize,  boxSize }
-				};
-
-				// Draw edges of the 3D box in green
-				RenderLine(vCenter + vOffsets[0], vCenter + vOffsets[1], Green, bZBuffer);
-				RenderLine(vCenter + vOffsets[1], vCenter + vOffsets[3], Green, bZBuffer);
-				RenderLine(vCenter + vOffsets[3], vCenter + vOffsets[2], Green, bZBuffer);
-				RenderLine(vCenter + vOffsets[2], vCenter + vOffsets[0], Green, bZBuffer);
-
-				RenderLine(vCenter + vOffsets[4], vCenter + vOffsets[5], Green, bZBuffer);
-				RenderLine(vCenter + vOffsets[5], vCenter + vOffsets[7], Green, bZBuffer);
-				RenderLine(vCenter + vOffsets[7], vCenter + vOffsets[6], Green, bZBuffer);
-				RenderLine(vCenter + vOffsets[6], vCenter + vOffsets[4], Green, bZBuffer);
-
-				RenderLine(vCenter + vOffsets[0], vCenter + vOffsets[4], Green, bZBuffer);
-				RenderLine(vCenter + vOffsets[1], vCenter + vOffsets[5], Green, bZBuffer);
-				RenderLine(vCenter + vOffsets[2], vCenter + vOffsets[6], Green, bZBuffer);
-				RenderLine(vCenter + vOffsets[3], vCenter + vOffsets[7], Green, bZBuffer);
-			}
+				RenderBox(Line[i], { -1, -1, -1 }, { 1, 1, 1 }, {}, Color, { 0, 0, 0, 0 }, bZBuffer);
 			break;
 		}
 		}
@@ -962,27 +707,34 @@ void CVisuals::RenderBox(const Vec3& vPos, const Vec3& vMins, const Vec3& vMaxs,
 
 void CVisuals::FOV(CTFPlayer* pLocal, CViewSetup* pView)
 {
-	pLocal->m_iFOV() = pView->fov;
+	int iFOV = pLocal->IsScoped() ? Vars::Visuals::UI::ZoomFieldOfView.Value : Vars::Visuals::UI::FieldOfView.Value;
+	pView->fov = pLocal->m_iFOV() = iFOV ? iFOV : pView->fov;
 
-	const int fov = pLocal->IsScoped() ? Vars::Visuals::UI::ZoomFieldOfView.Value : Vars::Visuals::UI::FieldOfView.Value;
-	if (!fov)
-		return;
-
-	pView->fov = fov;
-	pLocal->m_iFOV() = fov;
+	int iDefault = Vars::Visuals::UI::FieldOfView.Value;
+	if (!iDefault)
+	{
+		static auto fov_desired = U::ConVars.FindVar("fov_desired");
+		if (!fov_desired)
+			return;
+		iDefault = fov_desired->GetInt();
+	}
+	pLocal->m_iDefaultFOV() = iDefault;
 }
 
 void CVisuals::ThirdPerson(CTFPlayer* pLocal, CViewSetup* pView)
 {
+	if (F::Spectate.m_iTarget != -1)
+		return;
+
 	if (!pLocal->IsAlive())
 		return I::Input->CAM_ToFirstPerson();
 
-	const bool bNoZoom = (!Vars::Visuals::Removals::Scope.Value || Vars::Visuals::UI::ZoomFieldOfView.Value < 70) && pLocal->IsScoped();
+	const bool bZoom = pLocal->IsScoped() && (!Vars::Visuals::Removals::Scope.Value || Vars::Visuals::UI::ZoomFieldOfView.Value < 20);
 	const bool bForce = pLocal->IsTaunting() || pLocal->IsAGhost() || pLocal->IsInBumperKart() || pLocal->InCond(TF_COND_HALLOWEEN_THRILLER);
 	//if (bForce)
 	//	return;
 
-	if (Vars::Visuals::ThirdPerson::Enabled.Value && !bNoZoom || bForce)
+	if (Vars::Visuals::ThirdPerson::Enabled.Value && !bZoom || bForce)
 		I::Input->CAM_ToThirdPerson();
 	else
 		I::Input->CAM_ToFirstPerson();
@@ -1265,11 +1017,11 @@ void CVisuals::CreateMove(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 		float flNewRatio = flStaticRatio = Vars::Visuals::UI::AspectRatio.Value;
 
 		static auto r_aspectratio = U::ConVars.FindVar("r_aspectratio");
-		if (r_aspectratio && (flNewRatio || flOldRatio))
-			r_aspectratio->SetValue(Vars::Visuals::UI::AspectRatio.Value);
+		if (flNewRatio != flOldRatio && r_aspectratio)
+			r_aspectratio->SetValue(flNewRatio);
 	}
 
-	if (pLocal && Vars::Visuals::Particles::SpellFootsteps.Value && (G::DoubleTap || G::Warp))
+	if (pLocal && Vars::Visuals::Particles::SpellFootsteps.Value && (F::Ticks.m_bDoubletap || F::Ticks.m_bWarp))
 		S::CTFPlayer_FireEvent.Call<void>(pLocal, pLocal->GetAbsOrigin(), QAngle(), 7001, nullptr);
 	
 	static uint32_t iOldMedigunBeam = 0, iOldMedigunCharge = 0;

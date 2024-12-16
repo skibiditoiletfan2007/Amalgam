@@ -52,7 +52,7 @@ void CCore::Loop()
 {
 	while (true)
 	{
-		bool bShouldUnload = U::KeyHandler.Down(VK_DELETE) && SDK::IsGameWindowInFocus() || bUnload;
+		bool bShouldUnload = U::KeyHandler.Down(VK_F11) && SDK::IsGameWindowInFocus() || bUnload;
 		if (bShouldUnload)
 			break;
 
@@ -95,8 +95,8 @@ void CCore::Unload()
 	Sleep(250);
 		SDK::Output("Core", "U::ConVars.Unload();", {}, false, false, false, true);
 	U::ConVars.Unload();
-		//SDK::Output("Core", "F::Materials.UnloadMaterials();", {}, false, false, false, true);
-	//F::Materials.UnloadMaterials();
+		SDK::Output("Core", "F::Materials.UnloadMaterials();", {}, false, false, false, true);
+	F::Materials.UnloadMaterials();
 
 	SDK::Output("Amalgam", "Unloaded", { 175, 150, 255, 255 }, true, false, false, true);
 }

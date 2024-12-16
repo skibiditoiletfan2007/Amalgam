@@ -194,7 +194,7 @@ public:
 	NETVAR_OFF(m_bStunNeedsFadeOut, bool, "CTFPlayer", "m_hItem", -188);
 	NETVAR_OFF(m_bTauntForceMoveForward, bool, "CTFPlayer", "m_bAllowMoveDuringTaunt", 1);
 
-	VIRTUAL(GetMaxHealth, int, int(__fastcall*)(void*), this, 107);
+	VIRTUAL(GetMaxHealth, int, int(*)(void*), this, 107);
 
 	CONDGET(IsSlowed, m_nPlayerCond(), TFCond_Slowed);
 	CONDGET(IsScoped, m_nPlayerCond(), TFCond_Zoomed);
@@ -270,8 +270,7 @@ public:
 				return { 0.f, 0.f, 68.f };
 			};
 
-		const float flSize = (m_vecMins().z + m_vecMaxs().z) / (IsDucking() ? 62 : 82);
-		return getMainOffset() * flSize;
+		return getMainOffset() * m_flModelScale();
 	}
 
 	inline bool IsFriend()
@@ -428,13 +427,6 @@ public:
 		return true;
 	}
 
-	inline CTFWeaponBase* GetWeaponFromSlot(int nSlot)
-	{
-		static int nOffset = U::NetVars.GetNetVar("CBaseCombatCharacter", "m_hMyWeapons");
-		int hWeapon = *reinterpret_cast<int*>(reinterpret_cast<uintptr_t>(this) + nOffset + nSlot * 4);
-		return I::ClientEntityList->GetClientEntityFromHandle(hWeapon)->As<CTFWeaponBase>();
-	}
-
 	inline float TeamFortress_CalculateMaxSpeed(bool bIgnoreSpecialAbility = false)
 	{
 		return S::TeamFortress_CalculateMaxSpeed.Call<float>(this, bIgnoreSpecialAbility);
@@ -457,7 +449,7 @@ public:
 
 	inline void ThirdPersonSwitch(/*bool bThirdperson*/)
 	{
-		return reinterpret_cast<void(__fastcall*)(void*/*, bool*/)>(U::Memory.GetVFunc(this, 255))(this/*, bThirdperson*/);
+		return reinterpret_cast<void(*)(void*/*, bool*/)>(U::Memory.GetVFunc(this, 255))(this/*, bThirdperson*/);
 	};
 };
 
