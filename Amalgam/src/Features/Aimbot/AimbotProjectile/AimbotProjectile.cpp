@@ -693,10 +693,9 @@ void CAimbotProjectile::CalculateAngle(const Vec3& vLocalPos, const Vec3& vTarge
 		Vec3 vShootPos = projInfo.m_vPos - vLocalPos; vShootPos.z = 0;
 		Vec3 vTarget = vTargetPos - vLocalPos;
 		Vec3 vForward; Math::AngleVectors(projInfo.m_vAng, &vForward); vForward.z = 0; vForward.Normalize();
-		float flA = 1.f;
 		float flB = 2 * (vShootPos.x * vForward.x + vShootPos.y * vForward.y);
 		float flC = vShootPos.Length2DSqr() - vTarget.Length2DSqr();
-		auto vSolutions = Math::SolveQuadratic(flA, flB, flC);
+		auto vSolutions = Math::SolveQuadratic(1.f, flB, flC);
 		if (!vSolutions.empty())
 		{
 			vShootPos += vForward * vSolutions.front();
@@ -720,10 +719,9 @@ void CAimbotProjectile::CalculateAngle(const Vec3& vLocalPos, const Vec3& vTarge
 			Vec3 vShootPos = Math::RotatePoint(projInfo.m_vPos - vLocalPos, {}, { 0, -flYaw, 0 }); vShootPos.y = 0;
 			Vec3 vTarget = Math::RotatePoint(vTargetPos - vLocalPos, {}, { 0, -flYaw, 0 });
 			Vec3 vForward; Math::AngleVectors(projInfo.m_vAng - Vec3(0, flYaw, 0), &vForward); vForward.y = 0; vForward.Normalize();
-			float flA = 1.f;
 			float flB = 2 * (vShootPos.x * vForward.x + vShootPos.z * vForward.z);
 			float flC = (powf(vShootPos.x, 2) + powf(vShootPos.z, 2)) - (powf(vTarget.x, 2) + powf(vTarget.z, 2));
-			auto vSolutions = Math::SolveQuadratic(flA, flB, flC);
+			auto vSolutions = Math::SolveQuadratic(1.f, flB, flC);
 			if (!vSolutions.empty())
 			{
 				vShootPos += vForward * vSolutions.front();
@@ -1061,7 +1059,7 @@ int CAimbotProjectile::CanHit(Target_t& target, CTFPlayer* pLocal, CTFWeaponBase
 	}
 	F::MoveSim.Restore(storage);
 
-	const float flTime = TICKS_TO_TIME(pProjectilePath->size());
+	const float flTime = TICKS_TO_TIME(pPlayerPath->size());
 	target.m_vPos = vTarget;
 
 	if (Vars::Aimbot::General::AimType.Value == Vars::Aimbot::General::AimTypeEnum::Silent)
@@ -1076,6 +1074,7 @@ int CAimbotProjectile::CanHit(Target_t& target, CTFPlayer* pLocal, CTFWeaponBase
 			if (!Vars::Colors::BoundHitboxEdge.Value.a && !Vars::Colors::BoundHitboxFace.Value.a)
 				return true;
 
+			tInfo.m_vHull = tInfo.m_vHull.Max(1);
 			pBoxes->push_back({ vPredicted, target.m_pEntity->m_vecMins(), target.m_pEntity->m_vecMaxs(), Vec3(), I::GlobalVars->curtime + (Vars::Visuals::Simulation::Timed.Value ? flTime : 5.f), Vars::Colors::BoundHitboxEdge.Value, Vars::Colors::BoundHitboxFace.Value, true });
 			pBoxes->push_back({ vTarget, tInfo.m_vHull * -1, tInfo.m_vHull, Vec3(), I::GlobalVars->curtime + (Vars::Visuals::Simulation::Timed.Value ? flTime : 5.f), Vars::Colors::BoundHitboxEdge.Value, Vars::Colors::BoundHitboxFace.Value, true });
 

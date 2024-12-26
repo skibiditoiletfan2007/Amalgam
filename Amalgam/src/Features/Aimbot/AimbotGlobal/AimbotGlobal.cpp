@@ -143,16 +143,16 @@ bool CAimbotGlobal::ShouldIgnore(CBaseEntity* pEntity, CTFPlayer* pLocal, CTFWea
 	{
 		auto pBuilding = pEntity->As<CBaseObject>();
 
+		if (!(Vars::Aimbot::General::Target.Value & Vars::Aimbot::General::TargetEnum::Sentry) && pBuilding->IsSentrygun()
+			|| !(Vars::Aimbot::General::Target.Value & Vars::Aimbot::General::TargetEnum::Dispenser) && pBuilding->IsDispenser()
+			|| !(Vars::Aimbot::General::Target.Value & Vars::Aimbot::General::TargetEnum::Teleporter) && pBuilding->IsTeleporter())
+			return true;
+
 		if (pLocal->m_iTeamNum() == pEntity->m_iTeamNum())
 			return false;
 
 		auto pOwner = pBuilding->m_hBuilder().Get();
 		if (pOwner && F::PlayerUtils.IsIgnored(pOwner->entindex()))
-			return true;
-
-		if (!(Vars::Aimbot::General::Target.Value & Vars::Aimbot::General::TargetEnum::Sentry) && pBuilding->IsSentrygun()
-			|| !(Vars::Aimbot::General::Target.Value & Vars::Aimbot::General::TargetEnum::Dispenser) && pBuilding->IsDispenser()
-			|| !(Vars::Aimbot::General::Target.Value & Vars::Aimbot::General::TargetEnum::Teleporter) && pBuilding->IsTeleporter())
 			return true;
 
 		return false;
@@ -173,16 +173,17 @@ bool CAimbotGlobal::ShouldIgnore(CBaseEntity* pEntity, CTFPlayer* pLocal, CTFWea
 
 		return false;
 	}
-	case ETFClassID::CHeadlessHatman:
-	case ETFClassID::CTFTankBoss:
-	case ETFClassID::CMerasmus:
 	case ETFClassID::CEyeballBoss:
+	case ETFClassID::CHeadlessHatman:
+	case ETFClassID::CMerasmus:
+	case ETFClassID::CTFBaseBoss:
 	{
 		if (pEntity->m_iTeamNum() != 5)
 			return true;
 
 		return false;
 	}
+	case ETFClassID::CTFTankBoss:
 	case ETFClassID::CZombie:
 	{
 		if (pLocal->m_iTeamNum() == pEntity->m_iTeamNum())
