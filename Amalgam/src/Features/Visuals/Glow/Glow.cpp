@@ -608,7 +608,6 @@ void CGlow::Initialize()
 		m_pRenderBuffer1->IncrementReferenceCount();
 	}
 
-		SDK::Output("Glow::Initialize", "m_pRenderBuffer2", {}, false, false, false, true);
 	if (!m_pRenderBuffer2)
 	{
 		m_pRenderBuffer2 = I::MaterialSystem->CreateNamedRenderTargetTextureEx(

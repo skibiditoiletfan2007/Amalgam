@@ -133,6 +133,7 @@ void CEnginePrediction::End(CTFPlayer* pLocal, CUserCmd* pCmd)
 
 	if (m_bDoubletap && !G::Attacking)
 	{
+		pLocal->m_vecOrigin() = m_vOriginalOrigin;
 		pLocal->m_vecVelocity() = m_vOriginalVelocity;
 
 		Simulate(pLocal, pCmd);

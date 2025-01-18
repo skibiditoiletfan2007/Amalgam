@@ -182,8 +182,8 @@ public:
 	NETVAR(m_bViewingCYOAPDA, bool, "CTFPlayer", "m_bViewingCYOAPDA");
 	inline void* m_Shared()
 	{
-			static int nOffset = U::NetVars.GetNetVar("CTFPlayer", "m_Shared");
-			return reinterpret_cast<void*>(uintptr_t(this) + nOffset);
+		static int nOffset = U::NetVars.GetNetVar("CTFPlayer", "m_Shared");
+		return reinterpret_cast<void*>(uintptr_t(this) + nOffset);
 	};
 
 	NETVAR_OFF(m_flGravity, float, "CTFPlayer", "m_nWaterLevel", -24);

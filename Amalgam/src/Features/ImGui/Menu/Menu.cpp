@@ -80,14 +80,14 @@ void CMenu::DrawMenu()
 	Bind_t tBind;
 	if (F::Binds.GetBind(CurrentBind, &tBind))
 	{
-		const auto textSize = FCalcTextSize(std::format("Editing for condition {}", tBind.Name).c_str());
+		const auto textSize = FCalcTextSize(std::format("Editing bind {}", tBind.Name).c_str());
 		SetNextWindowSize({ std::clamp(textSize.x + H::Draw.Scale(56), H::Draw.Scale(40), vMainWindowSize.x), H::Draw.Scale(40) });
 		SetNextWindowPos({ vMainWindowPos.x, vMainWindowPos.y + vMainWindowSize.y + H::Draw.Scale(8) });
 		if (Begin("Bind", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar))
 		{
-			const auto preSize = FCalcTextSize("Editing for condition ");
+			const auto preSize = FCalcTextSize("Editing bind ");
 			SetCursorPos({ H::Draw.Scale(16), H::Draw.Scale(13) });
-			FText("Editing for condition ");
+			FText("Editing bind ");
 			SetCursorPos({ H::Draw.Scale(16) + preSize.x, H::Draw.Scale(13) });
 			PushStyleColor(ImGuiCol_Text, F::Render.Accent.Value);
 			FText(tBind.Name.c_str());
@@ -230,6 +230,9 @@ void CMenu::MenuAimbot()
 						FSlider("max changes##ground", Vars::Aimbot::Projectile::GroundMaxChanges, 0, 5, 1, "%i", FSlider_Left | FSlider_Min | FSlider_Precision);
 						FSlider("max change time##ground", Vars::Aimbot::Projectile::GroundMaxChangeTime, 0, 66, 1, "%i", FSlider_Right | FSlider_Min | FSlider_Precision);
 
+						FSlider("new weight##ground", Vars::Aimbot::Projectile::GroundNewWeight, 0.f, 200.f, 5.f, "%g%%", FSlider_Left | FSlider_Min | FSlider_Precision);
+						FSlider("old weight##ground", Vars::Aimbot::Projectile::GroundOldWeight, 0.f, 200.f, 5.f, "%g%%", FSlider_Right | FSlider_Min | FSlider_Precision);
+
 						FText("air");
 						FSlider("samples##air", Vars::Aimbot::Projectile::AirSamples, 3, 66, 1, "%i", FSlider_Left);
 						FSlider("straight fuzzy value##air", Vars::Aimbot::Projectile::AirStraightFuzzyValue, 0.f, 500.f, 25.f, "%g", FSlider_Right | FSlider_Precision);
@@ -239,6 +242,9 @@ void CMenu::MenuAimbot()
 						FSlider("high min distance##air", Vars::Aimbot::Projectile::AirHighMinimumDistance, 0.f, 10000.f, 100.f, "%g", FSlider_Right | FSlider_Min | FSlider_Precision);
 						FSlider("max changes##air", Vars::Aimbot::Projectile::AirMaxChanges, 0, 5, 1, "%i", FSlider_Left | FSlider_Min | FSlider_Precision);
 						FSlider("max change time##air", Vars::Aimbot::Projectile::AirMaxChangeTime, 0, 66, 1, "%i", FSlider_Right | FSlider_Min | FSlider_Precision);
+
+						FSlider("new weight##air", Vars::Aimbot::Projectile::AirNewWeight, 0.f, 200.f, 5.f, "%g%%", FSlider_Left | FSlider_Min | FSlider_Precision);
+						FSlider("old weight##air", Vars::Aimbot::Projectile::AirOldWeight, 0.f, 200.f, 5.f, "%g%%", FSlider_Right | FSlider_Min | FSlider_Precision);
 
 						FText("");
 						FSlider("velocity average count", Vars::Aimbot::Projectile::VelocityAverageCount, 1, 10, 1, "%i", FSlider_Left);
@@ -375,7 +381,9 @@ void CMenu::MenuAimbot()
 				{
 					PushTransparent(!FGet(Vars::CheaterDetection::Methods));
 						FDropdown("Detection methods", Vars::CheaterDetection::Methods, { "Invalid pitch", "Packet choking", "Aim flicking", "Duck Speed" }, {}, FDropdown_Multi);
-						FSlider("Detections required", Vars::CheaterDetection::DetectionsRequired, 10, 50, 1);
+						PushTransparent(!FGet(Vars::CheaterDetection::DetectionsRequired));
+							FSlider("Detections required", Vars::CheaterDetection::DetectionsRequired, 0, 50, 1);
+						PopTransparent();
 
 						PushTransparent(!(FGet(Vars::CheaterDetection::Methods) & Vars::CheaterDetection::MethodsEnum::PacketChoking));
 							FSlider("Minimum choking", Vars::CheaterDetection::MinimumChoking, 4, 22, 1);
@@ -1434,7 +1442,7 @@ void CMenu::MenuSettings()
 						I::EngineClient->ClientCmd_Unrestricted("retry");
 					if (FButton("Console", FButton_Left))
 						I::EngineClient->ClientCmd_Unrestricted("toggleconsole");
-					if (FButton("Fix Chams", FButton_Right | FButton_SameLine))
+					if (FButton("Fix materials", FButton_Right | FButton_SameLine) && F::Materials.m_bLoaded)
 						F::Materials.ReloadMaterials();
 
 					if (!I::EngineClient->IsConnected())
@@ -1782,7 +1790,7 @@ void CMenu::MenuSettings()
 								SetCursorPos({ vOriginalPos.x + H::Draw.Scale(7), vOriginalPos.y + H::Draw.Scale(5) });
 								IconImage(ICON_MD_GROUPS);
 							}
-							else if (F::Spectate.m_iTarget == player.m_iUserID)
+							else if (F::Spectate.m_iIntendedTarget == player.m_iUserID)
 							{
 								lOffset = H::Draw.Scale(29);
 								SetCursorPos({ vOriginalPos.x + H::Draw.Scale(7), vOriginalPos.y + H::Draw.Scale(5) });
@@ -1881,7 +1889,7 @@ void CMenu::MenuSettings()
 								if (FSelectable("History"))
 									I::SteamFriends->ActivateGameOverlayToWebPage(std::format("https://steamhistory.net/id/{}", CSteamID(player.m_uFriendsID, k_EUniversePublic, k_EAccountTypeIndividual).ConvertToUint64()).c_str());
 
-								if (FSelectable(F::Spectate.m_iTarget == player.m_iUserID ? "Unspectate" : "Spectate"))
+								if (FSelectable(F::Spectate.m_iIntendedTarget == player.m_iUserID ? "Unspectate" : "Spectate"))
 									F::Spectate.SetTarget(player.m_iUserID);
 
 								if (!player.m_bLocal && FSelectable("Votekick"))

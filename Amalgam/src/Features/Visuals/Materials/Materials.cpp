@@ -45,15 +45,15 @@ void CMaterials::StoreVars(Material_t& tMaterial)
 		return;
 
 	tMaterial.m_bStored = true;
-	
+
 	bool bFound; auto $phongtint = tMaterial.m_pMaterial->FindVar("$phongtint", &bFound, false);
 	if (bFound)
 		tMaterial.m_phongtint = $phongtint;
-
+	
 	auto $envmaptint = tMaterial.m_pMaterial->FindVar("$envmaptint", &bFound, false);
 	if (bFound)
 		tMaterial.m_envmaptint = $envmaptint;
-
+	
 	auto $invertcull = tMaterial.m_pMaterial->FindVar("$invertcull", &bFound, false);
 	if (bFound && $invertcull && $invertcull->GetIntValueInternal())
 		tMaterial.m_bInvertCull = true;
@@ -175,7 +175,7 @@ void CMaterials::LoadMaterials()
 		KeyValues* kv = new KeyValues(tMaterial.m_sName.c_str());
 		bool bLoad = kv->LoadFromBuffer(tMaterial.m_sName.c_str(), tMaterial.m_sVMT.c_str());
 		ModifyKeyValues(kv);
-
+			
 		tMaterial.m_pMaterial = Create(tMaterial.m_sName.c_str(), kv);
 		//StoreVars(tMaterial);
 	}

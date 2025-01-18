@@ -360,7 +360,7 @@ public:
 	{
 		return Max(v1).Min(v2);
 	}
-	
+
 	Vec3 Min(float v) const
 	{
 		return Vec3(std::min<float>(x, v), std::min<float>(y, v), std::min<float>(z, v));
@@ -375,7 +375,7 @@ public:
 	{
 		return Max(v1).Min(v2);
 	}
-	
+
 	float Length(void) const
 	{
 		return sqrtf(x * x + y * y + z * z);

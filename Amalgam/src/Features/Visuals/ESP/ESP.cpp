@@ -778,7 +778,6 @@ void CESP::StoreWorld()
 			const char* szName = "NPC";
 			switch (pEntity->GetClassID())
 			{
-			case ETFClassID::CEyeballBoss: szName = "Monoculus";
 			case ETFClassID::CHeadlessHatman: szName = "HORSELESS HEADLESS HORSEMANN"; break;
 			case ETFClassID::CMerasmus: szName = "MERASMUS"; break;
 			case ETFClassID::CTFBaseBoss: szName = "BOSS";
@@ -1163,8 +1162,7 @@ bool CESP::GetDrawBounds(CBaseEntity* pEntity, float& x, float& y, float& w, flo
 const char* CESP::GetPlayerClass(int iClassNum)
 {
 	static const char* szClasses[] = {
-		"Unknown", "Scout", "Sniper", "Soldier", "Demoman",
-		"Medic", "Heavy", "Pyro", "Spy", "Engineer"
+		"Unknown", "Scout", "Sniper", "Soldier", "Demoman", "Medic", "Heavy", "Pyro", "Spy", "Engineer"
 	};
 
 	return iClassNum < 10 && iClassNum > 0 ? szClasses[iClassNum] : szClasses[0];

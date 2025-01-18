@@ -735,6 +735,43 @@ void CAimbotProjectile::CalculateAngle(const Vec3& vLocalPos, const Vec3& vTarge
 	out.m_iCalculated = iTimeTo > iSimTime ? 2 : 1;
 }
 
+
+
+class CTraceFilterProjectileNoPlayer : public ITraceFilter
+{
+public:
+	bool ShouldHitEntity(IHandleEntity* pServerEntity, int nContentsMask) override;
+	TraceType_t GetTraceType() const override;
+	CBaseEntity* pSkip = nullptr;
+};
+bool CTraceFilterProjectileNoPlayer::ShouldHitEntity(IHandleEntity* pServerEntity, int nContentsMask)
+{
+	if (!pServerEntity || pServerEntity == pSkip)
+		return false;
+
+	auto pEntity = reinterpret_cast<CBaseEntity*>(pServerEntity);
+
+	switch (pEntity->GetClassID())
+	{
+	case ETFClassID::CBaseEntity:
+	case ETFClassID::CBaseDoor:
+	case ETFClassID::CDynamicProp:
+	case ETFClassID::CPhysicsProp:
+	case ETFClassID::CObjectCartDispenser:
+	case ETFClassID::CFuncTrackTrain:
+	case ETFClassID::CFuncConveyor:
+	case ETFClassID::CObjectSentrygun:
+	case ETFClassID::CObjectDispenser:
+	case ETFClassID::CObjectTeleporter: return true;
+	}
+
+	return false;
+}
+TraceType_t CTraceFilterProjectileNoPlayer::GetTraceType() const
+{
+	return TRACE_EVERYTHING;
+}
+
 bool CAimbotProjectile::TestAngle(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, Target_t& target, Vec3& vPoint, Vec3& vAngles, int iSimTime, bool bSplash, std::deque<Vec3>* pProjectilePath)
 {
 	ProjectileInfo projInfo = {};
@@ -745,7 +782,7 @@ bool CAimbotProjectile::TestAngle(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, Tar
 
 	CGameTrace trace = {};
 	CTraceFilterProjectile filter = {}; filter.pSkip = pLocal;
-	CTraceFilterWorldAndPropsOnly filterWorld = {};
+	CTraceFilterProjectileNoPlayer filterSplash = {};
 
 #ifdef SPLASH_DEBUG4
 	G::BoxStorage.push_back({ vPoint, projInfo.m_vHull * -1, projInfo.m_vHull, {}, I::GlobalVars->curtime + 5.f, { 255, 0, 0, 255 }, { 0, 0, 0, 0 } });
@@ -753,11 +790,13 @@ bool CAimbotProjectile::TestAngle(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, Tar
 
 	if (!projInfo.m_flGravity)
 	{
+		CTraceFilterWorldAndPropsOnly filterWorld = {};
 		SDK::TraceHull(projInfo.m_vPos, vPoint, projInfo.m_vHull * -1, projInfo.m_vHull, MASK_SOLID, &filterWorld, &trace);
 		if (trace.fraction < 0.999f)
 			return false;
 	}
 
+	bool bPrimeTime = false;
 	if (Vars::Aimbot::General::AimType.Value != Vars::Aimbot::General::AimTypeEnum::Smooth)
 		projInfo.m_vHull += Vec3(Vars::Aimbot::Projectile::HullIncrease.Value, Vars::Aimbot::Projectile::HullIncrease.Value, Vars::Aimbot::Projectile::HullIncrease.Value);
 
@@ -780,13 +819,12 @@ bool CAimbotProjectile::TestAngle(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, Tar
 		else
 		{
 			static Vec3 vStaticPos = {};
-			if (n == 1)
+			if (n == 1 || bPrimeTime)
 				vStaticPos = vOld;
-
-			if (n % Vars::Aimbot::Projectile::SplashTraceInterval.Value && n != iSimTime)
+			if (n % Vars::Aimbot::Projectile::SplashTraceInterval.Value && n != iSimTime && !bPrimeTime)
 				continue;
 
-			SDK::TraceHull(vStaticPos, vNew, projInfo.m_vHull * -1, projInfo.m_vHull, MASK_SOLID, &filterWorld, &trace);
+			SDK::TraceHull(vStaticPos, vNew, projInfo.m_vHull * -1, projInfo.m_vHull, MASK_SOLID, &filterSplash, &trace);
 #ifdef SPLASH_DEBUG4
 			G::LineStorage.push_back({ { vStaticPos, vNew }, I::GlobalVars->curtime + 5.f, { 255, 0, 0, 255 } });
 #endif
@@ -803,8 +841,9 @@ bool CAimbotProjectile::TestAngle(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, Tar
 
 			bool bTarget = trace.m_pEnt == target.m_pEntity || bSplash;
 			bool bTime = bSplash ? trace.endpos.DistTo(vPoint) < projInfo.m_flVelocity * TICK_INTERVAL : iSimTime - n < 5;
-
-			if (bTarget && bTime && (bSplash ? SDK::VisPosWorld(nullptr, target.m_pEntity, trace.endpos, vPoint, MASK_SOLID) : true))
+			bool bValid = bTarget && bTime && (bSplash ? SDK::VisPosWorld(nullptr, target.m_pEntity, trace.endpos, vPoint, MASK_SOLID) : true);
+			
+			if (bValid)
 			{
 				if (Vars::Aimbot::General::AimType.Value == Vars::Aimbot::General::AimTypeEnum::Smooth)
 				{
@@ -833,7 +872,7 @@ bool CAimbotProjectile::TestAngle(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, Tar
 							auto pSet = pHDR->pHitboxSet(target.m_pEntity->As<CTFPlayer>()->m_nHitboxSet());
 							if (!pSet) break;
 
-							matrix3x4* aBones = H::Entities.GetBones(target.m_pEntity->entindex());
+							auto aBones = H::Entities.GetBones(target.m_pEntity->entindex());
 							if (!aBones)
 								break;
 
@@ -869,10 +908,10 @@ bool CAimbotProjectile::TestAngle(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, Tar
 
 				bDidHit = true;
 			}
-			else if (pWeapon->GetWeaponID() == TF_WEAPON_PIPEBOMBLAUNCHER && !bSplash && bTarget)
-			{	// run for 5 more ticks to check for splash
+			else if (!bSplash && bTarget && pWeapon->GetWeaponID() == TF_WEAPON_PIPEBOMBLAUNCHER)
+			{	// run for more ticks to check for splash
 				iSimTime = n + 5;
-				bSplash = true;
+				bSplash = bPrimeTime = true;
 			}
 			else
 				break;
@@ -880,7 +919,7 @@ bool CAimbotProjectile::TestAngle(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, Tar
 			if (!bSplash)
 				trace.endpos = vNew;
 
-			if (!bTarget || bSplash)
+			if (!bTarget || bSplash && !bPrimeTime)
 				break;
 		}
 	}
@@ -1082,7 +1121,7 @@ int CAimbotProjectile::CanHit(Target_t& target, CTFPlayer* pLocal, CTFWeaponBase
 			{
 				const Vec3 vOriginOffset = target.m_pEntity->m_vecOrigin() - vPredicted;
 
-				matrix3x4* aBones = H::Entities.GetBones(target.m_pEntity->entindex());
+				auto aBones = H::Entities.GetBones(target.m_pEntity->entindex());
 				if (!aBones)
 					return true;
 
@@ -1098,7 +1137,7 @@ int CAimbotProjectile::CanHit(Target_t& target, CTFPlayer* pLocal, CTFWeaponBase
 			{
 				const Vec3 vOriginOffset = target.m_pEntity->m_vecOrigin() - vPredicted;
 
-				matrix3x4* aBones = H::Entities.GetBones(target.m_pEntity->entindex());
+				auto aBones = H::Entities.GetBones(target.m_pEntity->entindex());
 				if (!aBones)
 					return true;
 
@@ -1153,12 +1192,13 @@ Vec3 CAimbotProjectile::Aim(Vec3 vCurAngle, Vec3 vToAngle, int iMethod)
 void CAimbotProjectile::Aim(CUserCmd* pCmd, Vec3& vAngle)
 {
 	bool bDoubleTap = F::Ticks.m_bDoubletap || F::Ticks.GetTicks(H::Entities.GetWeapon()) || F::Ticks.m_bSpeedhack;
+	auto pWeapon = H::Entities.GetWeapon();
 	if (Vars::Aimbot::General::AimType.Value != Vars::Aimbot::General::AimTypeEnum::Silent)
 	{
 		//pCmd->viewangles = vAngle; // retarded, overshooting with this uncommented
 		I::EngineClient->SetViewAngles(vAngle);
 	}
-	else if (G::Attacking == 1 || bDoubleTap)
+	else if (G::Attacking == 1 || bDoubleTap || pWeapon && pWeapon->GetWeaponID() == TF_WEAPON_FLAMETHROWER)
 	{
 		SDK::FixMovement(pCmd, vAngle);
 		pCmd->viewangles = vAngle;
@@ -1271,39 +1311,38 @@ bool CAimbotProjectile::RunMain(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUser
 
 		if (G::Attacking == 1 || !Vars::Aimbot::General::AutoShoot.Value)
 		{
-			if (Vars::Visuals::Simulation::PlayerPath.Value
-				|| Vars::Visuals::Simulation::ProjectilePath.Value && (G::Attacking == 1 || Vars::Debug::Info.Value)
-				|| Vars::Visuals::Hitbox::Enabled.Value & Vars::Visuals::Hitbox::EnabledEnum::OnShot)
+			bool bPlayerPath = Vars::Visuals::Simulation::PlayerPath.Value;
+			bool bProjectilePath = Vars::Visuals::Simulation::ProjectilePath.Value && (G::Attacking == 1 || Vars::Debug::Info.Value);
+			bool bBoxes = Vars::Visuals::Hitbox::Enabled.Value & Vars::Visuals::Hitbox::EnabledEnum::OnShot;
+			if (bPlayerPath || bProjectilePath || bBoxes)
 			{
 				G::PathStorage.clear();
-				G::LineStorage.clear();
-			}
-
-			if (Vars::Visuals::Simulation::PlayerPath.Value)
-			{
-				if (Vars::Colors::PlayerPath.Value.a)
-					G::PathStorage.push_back({ vPlayerPath, I::GlobalVars->curtime + 5.f, Vars::Colors::PlayerPath.Value, Vars::Visuals::Simulation::PlayerPath.Value });
-				if (Vars::Colors::PlayerPathClipped.Value.a)
-					G::PathStorage.push_back({ vPlayerPath, I::GlobalVars->curtime + 5.f, Vars::Colors::PlayerPathClipped.Value, Vars::Visuals::Simulation::PlayerPath.Value, true });
-			}
-			if (Vars::Visuals::Simulation::ProjectilePath.Value && (G::Attacking == 1 || Vars::Debug::Info.Value))
-			{
-				if (Vars::Colors::ProjectilePath.Value.a)
-					G::PathStorage.push_back({ vProjectilePath, Vars::Visuals::Simulation::Timed.Value ? -int(vProjectilePath.size()) - TIME_TO_TICKS(F::Backtrack.GetReal()) : I::GlobalVars->curtime + 5.f, Vars::Colors::ProjectilePath.Value, Vars::Visuals::Simulation::ProjectilePath.Value });
-				if (Vars::Colors::ProjectilePathClipped.Value.a)
-					G::PathStorage.push_back({ vProjectilePath, Vars::Visuals::Simulation::Timed.Value ? -int(vProjectilePath.size()) - TIME_TO_TICKS(F::Backtrack.GetReal()) : I::GlobalVars->curtime + 5.f, Vars::Colors::ProjectilePathClipped.Value, Vars::Visuals::Simulation::ProjectilePath.Value, true });
-			}
-			if (Vars::Visuals::Hitbox::Enabled.Value & Vars::Visuals::Hitbox::EnabledEnum::OnShot)
-			{
 				G::BoxStorage.clear();
-				G::BoxStorage.insert(G::BoxStorage.end(), vBoxes.begin(), vBoxes.end());
+				G::LineStorage.clear();
+
+				if (bPlayerPath)
+				{
+					if (Vars::Colors::PlayerPath.Value.a)
+						G::PathStorage.push_back({ vPlayerPath, Vars::Visuals::Simulation::Timed.Value ? -int(vPlayerPath.size()) : I::GlobalVars->curtime + 5.f, Vars::Colors::PlayerPath.Value, Vars::Visuals::Simulation::PlayerPath.Value });
+					if (Vars::Colors::PlayerPathClipped.Value.a)
+						G::PathStorage.push_back({ vPlayerPath, Vars::Visuals::Simulation::Timed.Value ? -int(vPlayerPath.size()) : I::GlobalVars->curtime + 5.f, Vars::Colors::PlayerPathClipped.Value, Vars::Visuals::Simulation::PlayerPath.Value, true });
+				}
+				if (bProjectilePath)
+				{
+					if (Vars::Colors::ProjectilePath.Value.a)
+						G::PathStorage.push_back({ vProjectilePath, Vars::Visuals::Simulation::Timed.Value ? -int(vProjectilePath.size()) - TIME_TO_TICKS(F::Backtrack.GetReal()) : I::GlobalVars->curtime + 5.f, Vars::Colors::ProjectilePath.Value, Vars::Visuals::Simulation::ProjectilePath.Value });
+					if (Vars::Colors::ProjectilePathClipped.Value.a)
+						G::PathStorage.push_back({ vProjectilePath, Vars::Visuals::Simulation::Timed.Value ? -int(vProjectilePath.size()) - TIME_TO_TICKS(F::Backtrack.GetReal()) : I::GlobalVars->curtime + 5.f, Vars::Colors::ProjectilePathClipped.Value, Vars::Visuals::Simulation::ProjectilePath.Value, true });
+				}
+				if (bBoxes)
+					G::BoxStorage.insert(G::BoxStorage.end(), vBoxes.begin(), vBoxes.end());
 			}
 		}
 
 		Aim(pCmd, target.m_vAngleTo);
 		if (G::PSilentAngles)
 		{
-			switch (pWeapon->GetWeaponID())
+			switch (nWeaponID)
 			{
 			case TF_WEAPON_FLAMETHROWER: // angles show up anyways
 			case TF_WEAPON_CLEAVER: // can't psilent with these weapons, they use SetContextThink
