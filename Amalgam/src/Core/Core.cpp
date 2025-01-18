@@ -9,17 +9,6 @@
 #include "../Features/Visuals/Visuals.h"
 #include "../SDK/Events/Events.h"
 
-static inline bool CheckDXLevel()
-{
-	auto mat_dxlevel = U::ConVars.FindVar("mat_dxlevel");
-	if (mat_dxlevel->GetInt() < 90)
-	{
-		SDK::Output("Error", "You are running with graphics options that Amalgam does not support.\n-dxlevel must be at least 90.", { 175, 150, 255, 255 }, true, false, false, true, MB_OK | MB_ICONERROR);
-		return false;
-	}
-
-	return true;
-}
 
 void CCore::Load()
 {
@@ -32,7 +21,7 @@ void CCore::Load()
 	Sleep(500);
 
 	SDK::GetTeamFortressWindow();
-	if (m_bUnload = m_bFailed = !U::Signatures.Initialize() || !U::Interfaces.Initialize() || !CheckDXLevel())
+	if (m_bUnload = m_bFailed = !U::Signatures.Initialize() || !U::Interfaces.Initialize())
 		return;
 	if (m_bUnload = m_bFailed2 = !U::Hooks.Initialize() || !U::BytePatches.Initialize() || !H::Events.Initialize())
 		return;
