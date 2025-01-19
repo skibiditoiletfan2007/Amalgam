@@ -9,6 +9,11 @@
 #define TF_DAMAGE_CRIT_CHANCE_MELEE		0.15f
 #define TF_DAMAGE_CRIT_DURATION_RAPID	2.0f
 
+/*
+	problems:
+		flObservedCritChance in negative when more crit dmg than all damage
+*/
+
 void CCritHack::Fill(const CUserCmd* pCmd, int n)
 {
 	static int iStart = pCmd->command_number;
@@ -53,8 +58,6 @@ void CCritHack::Fill(const CUserCmd* pCmd, int n)
 	iStart += n;
 }
 
-
-
 bool CCritHack::IsCritCommand(int iSlot, int iIndex, float flMultCritChance, const i32 command_number, const bool bCrit, const bool bSafe)
 {
 	const auto uSeed = MD5_PseudoRandom(command_number) & 0x7FFFFFFF;
@@ -83,7 +86,29 @@ u32 CCritHack::DecryptOrEncryptSeed(int iSlot, int iIndex, u32 uSeed)
 	return iMask ^ uSeed;
 }
 
+void CCritHack::Resync(CTFPlayer* pLocal)
+{
+	CTFPlayerResource* pResource = H::Entities.GetPR();
+	if (!pResource)
+		return;
 
+	if (pResource->GetDamage(pLocal->entindex()) <= 0)
+	{
+		/*	m_iCritDamage = 0;
+			m_iAllDamage = 0;
+			m_iMeleeDamage = 0;
+			m_iBoostedDamage = 0;*/
+		return;
+	}
+
+	int iProperDamage = pResource->GetDamage(pLocal->entindex()) - m_iCritDamage - m_iBoostedDamage - m_iMeleeDamage;
+	if (m_iAllDamage < iProperDamage)
+	{
+		if (Vars::Debug::Logging.Value)
+			SDK::Output("Crithack", std::format("player resource reports {} damage but current m_iAllDamage is {}", iProperDamage, m_iAllDamage).c_str());
+		m_iAllDamage = iProperDamage;
+	}
+}
 
 void CCritHack::GetTotalCrits(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 {
@@ -216,11 +241,13 @@ void CCritHack::CanFireCritical(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 		return;
 
 	const float flNormalizedDamage = m_iCritDamage / TF_DAMAGE_CRIT_MULTIPLIER;
-	const float flObservedCritChance = flNormalizedDamage / (flNormalizedDamage + m_iAllDamage - m_iCritDamage);
+	const float flObservedCritChance = flNormalizedDamage / (flNormalizedDamage + std::max(m_iAllDamage, m_iCritDamage) - m_iCritDamage);
 	float flCritChance = m_flCritChance + 0.1f;
 	if (m_bCritBanned = flObservedCritChance > flCritChance)
 		m_iDamageTilUnban = flNormalizedDamage / flCritChance + m_iCritDamage - flNormalizedDamage - m_iAllDamage;
 }
+
+void CCritHack::IsAllowedToWithdrawFromCritBucketHandler(float flDamage) { m_iAllDamage = flDamage; }
 
 bool CCritHack::WeaponCanCrit(CTFWeaponBase* pWeapon, bool bWeaponOnly)
 {
@@ -255,8 +282,6 @@ bool CCritHack::WeaponCanCrit(CTFWeaponBase* pWeapon, bool bWeaponOnly)
 
 	return true;
 }
-
-
 
 void CCritHack::ResetWeapons(CTFPlayer* pLocal)
 {
@@ -307,8 +332,6 @@ void CCritHack::Reset()
 	SDK::Output("Crithack", "Resetting all", { 0, 255, 255, 255 }, Vars::Debug::Logging.Value);
 }
 
-
-
 void CCritHack::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 {
 	if (!pLocal || !pWeapon || !pLocal->IsAlive() || !I::EngineClient->IsInGame())
@@ -316,11 +339,15 @@ void CCritHack::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd)
 
 	int iSlot = pWeapon->GetSlot();
 	ResetWeapons(pLocal);
-	Fill(pCmd, 25);
+	Resync(pLocal);
+	Fill(pCmd, 128);
 	GetTotalCrits(pLocal, pWeapon);
 	CanFireCritical(pLocal, pWeapon);
 	if (pLocal->IsCritBoosted() || pWeapon->m_flCritTime() > I::GlobalVars->curtime || !m_mStorage.contains(iSlot))
 		return;
+
+	// try not to crit at stickies?
+	// and maybe crit arrows at teammates when healing
 
 	auto& tStorage = m_mStorage[iSlot];
 
@@ -430,22 +457,34 @@ void CCritHack::Event(IGameEvent* pEvent, uint32_t uHash, CTFPlayer* pLocal)
 			return;
 
 		const int iVictim = I::EngineClient->GetPlayerForUserID(pEvent->GetInt("userid"));
+		CTFPlayer* pVictim = I::ClientEntityList->GetClientEntity(iVictim)->As<CTFPlayer>();
 		const int iAttacker = I::EngineClient->GetPlayerForUserID(pEvent->GetInt("attacker"));
 		const bool bCrit = pEvent->GetBool("crit") || pEvent->GetBool("minicrit");
-		const int iDamage = m_mHealthStorage.contains(iVictim) ? std::min(pEvent->GetInt("damageamount"), m_mHealthStorage[iVictim]) : pEvent->GetInt("damageamount");
 		const auto iWeaponID = pEvent->GetInt("weaponid");
 
-		if (iVictim == iAttacker || iAttacker != pLocal->entindex() || iWeaponID != pWeapon->GetWeaponID() || pWeapon->GetSlot() == SLOT_MELEE) // weapon id stuff is dumb simplification
-			return;
+		int iDamage = m_mHealthStorage.contains(iVictim) ? std::min(pEvent->GetInt("damageamount"), m_mHealthStorage[iVictim]) : pEvent->GetInt("damageamount");
 
-		m_iAllDamage += iDamage;
-		if (bCrit && !pLocal->IsCritBoosted())
-			m_iCritDamage += iDamage;
+		if (iVictim == iAttacker || iAttacker != pLocal->entindex() /*|| iWeaponID != pWeapon->GetWeaponID()*/ || pWeapon->GetSlot() == SLOT_MELEE) // weapon id stuff is dumb simplification
+		{
+			if (pWeapon->GetSlot() == SLOT_MELEE)
+				m_iMeleeDamage += iDamage;
+			return;
+		}
+
+
+		// m_iAllDamage += iDamage;
+		if (bCrit)
+		{
+			if (pLocal->IsCritBoosted())
+				m_iBoostedDamage += iDamage;
+			else
+				m_iCritDamage += iDamage;
+		}
 
 		return;
 	}
 	case FNV1A::Hash32Const("teamplay_round_start"):
-		m_iAllDamage = m_iCritDamage = 0;
+		m_iAllDamage = m_iCritDamage = m_iMeleeDamage = m_iBoostedDamage = 0;
 		return;
 	case FNV1A::Hash32Const("client_beginconnect"):
 	case FNV1A::Hash32Const("client_disconnect"):
