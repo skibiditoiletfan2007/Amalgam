@@ -2422,7 +2422,7 @@ void CMenu::DrawBinds()
 	using namespace ImGui;
 
 	// Exit conditions
-	if (IsOpen ? !FGet(Vars::Menu::ShowBinds) : !Vars::Menu::ShowBinds.Value || I::EngineVGui->IsGameUIVisible() || I::MatSystemSurface->IsCursorVisible())
+	if (IsOpen ? !FGet(Vars::Menu::ShowBinds) : !Vars::Menu::ShowBinds.Value || I::EngineVGui->IsGameUIVisible() || I::MatSystemSurface->IsCursorVisible() && !I::EngineClient->IsPlayingDemo())
 		return;
 
 	// Handle draggable window position
