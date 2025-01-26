@@ -90,6 +90,22 @@ void CBacktrack::UpdateDatagram()
 		m_dSequences.pop_back();
 }
 
+
+
+bool CBacktrack::WithinRewind(const TickRecord& record)
+{
+	auto pNetChan = I::EngineClient->GetNetChannelInfo();
+	if (!pNetChan)
+		return false;
+
+	const float flCorrect = std::clamp(pNetChan->GetLatency(FLOW_OUTGOING) + ROUND_TO_TICKS(m_flFakeInterp) + ROUND_TO_TICKS(m_flFakeLatency), 0.f, m_flMaxUnlag) - pNetChan->GetLatency(FLOW_OUTGOING);
+	const int iServerTick = m_iTickCount + G::AnticipatedChoke + Vars::Backtrack::Offset.Value;
+
+	const float flDelta = flCorrect - TICKS_TO_TIME(iServerTick - TIME_TO_TICKS(record.m_flSimTime));
+
+	return fabsf(flDelta) < float(Vars::Backtrack::Window.Value) / 1000;
+}
+
 std::deque<TickRecord>* CBacktrack::GetRecords(CBaseEntity* pEntity)
 {
 	if (m_mRecords[pEntity].empty())
@@ -100,41 +116,22 @@ std::deque<TickRecord>* CBacktrack::GetRecords(CBaseEntity* pEntity)
 
 std::deque<TickRecord> CBacktrack::GetValidRecords(std::deque<TickRecord>* pRecords, CTFPlayer* pLocal, bool bDistance)
 {
-	std::deque<TickRecord> vRecords = {};
-		if (!pRecords || pRecords->empty())
-			return vRecords;
-		auto pNetChan = I::EngineClient->GetNetChannelInfo();
-		if (!pNetChan)
-			return vRecords;
-		float flCorrect = std::clamp(pNetChan->GetLatency(FLOW_OUTGOING) + ROUND_TO_TICKS(m_flFakeInterp) + ROUND_TO_TICKS(m_flFakeLatency), 0.f, m_flMaxUnlag) - pNetChan->GetLatency(FLOW_OUTGOING);
-		int iServerTick = m_iTickCount + G::AnticipatedChoke + Vars::Backtrack::Offset.Value;
+	std::deque<TickRecord> validRecords = {};
+	if (!pRecords)
+		return validRecords;
 
-		for (auto& tRecord : *pRecords)
+	for (auto& pTick : *pRecords)
 	{
-			float flDelta = fabsf(flCorrect - TICKS_TO_TIME(iServerTick - TIME_TO_TICKS(tRecord.m_flSimTime)));
-				if (flDelta > float(Vars::Backtrack::Window.Value) / 1000)
+		if (!WithinRewind(pTick))
 			continue;
 
-			vRecords.push_back(tRecord);
+		validRecords.push_back(pTick);
 	}
 
-		if (vRecords.empty())
-		{	// make sure there is at least 1 record
-				float flMinDelta = 0.2f;
-				for (auto& tRecord : *pRecords)
-				{
-						float flDelta = fabsf(flCorrect - TICKS_TO_TIME(iServerTick - TIME_TO_TICKS(tRecord.m_flSimTime)));
-						if (flDelta > flMinDelta)
-							continue;
-	
-						flMinDelta = flDelta;
-						vRecords = { tRecord };
-				}
-		}
-		else if (pLocal && vRecords.size() > 1)
+	if (pLocal)
 	{
 		if (bDistance)
-			std::sort(vRecords.begin(), vRecords.end(), [&](const TickRecord& a, const TickRecord& b) -> bool
+			std::sort(validRecords.begin(), validRecords.end(), [&](const TickRecord& a, const TickRecord& b) -> bool
 				{
 					if (Vars::Backtrack::PreferOnShot.Value && a.m_bOnShot != b.m_bOnShot)
 						return a.m_bOnShot > b.m_bOnShot;
@@ -143,7 +140,14 @@ std::deque<TickRecord> CBacktrack::GetValidRecords(std::deque<TickRecord>* pReco
 				});
 		else
 		{
-			std::sort(vRecords.begin(), vRecords.end(), [&](const TickRecord& a, const TickRecord& b) -> bool
+			auto pNetChan = I::EngineClient->GetNetChannelInfo();
+			if (!pNetChan)
+				return validRecords;
+
+			const float flCorrect = std::clamp(pNetChan->GetLatency(FLOW_OUTGOING) + ROUND_TO_TICKS(m_flFakeInterp) + ROUND_TO_TICKS(m_flFakeLatency), 0.f, m_flMaxUnlag) - pNetChan->GetLatency(FLOW_OUTGOING);
+			const int iServerTick = m_iTickCount + G::AnticipatedChoke + Vars::Backtrack::Offset.Value;
+
+			std::sort(validRecords.begin(), validRecords.end(), [&](const TickRecord& a, const TickRecord& b) -> bool
 				{
 					if (Vars::Backtrack::PreferOnShot.Value && a.m_bOnShot != b.m_bOnShot)
 						return a.m_bOnShot > b.m_bOnShot;
@@ -155,7 +159,7 @@ std::deque<TickRecord> CBacktrack::GetValidRecords(std::deque<TickRecord>* pReco
 		}
 	}
 
-		return vRecords;
+	return validRecords;
 }
 
 
@@ -173,8 +177,6 @@ void CBacktrack::MakeRecords()
 			pPlayer->m_flSimulationTime(),
 			*reinterpret_cast<BoneMatrix*>(H::Entities.GetBones(pPlayer->entindex())),
 			pPlayer->m_vecOrigin(),
-			pPlayer->m_vecMins(),
-			pPlayer->m_vecMaxs(),
 			m_mDidShoot[pPlayer->entindex()]
 		};
 

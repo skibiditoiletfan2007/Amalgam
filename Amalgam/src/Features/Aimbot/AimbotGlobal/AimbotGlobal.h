@@ -25,7 +25,7 @@ struct Target_t
 	int m_nPriority = 0;
 	int m_nAimedHitbox = -1;
 
-	TickRecord m_tRecord = {};
+	TickRecord m_Tick = {};
 	bool m_bBacktrack = false;
 };
 
