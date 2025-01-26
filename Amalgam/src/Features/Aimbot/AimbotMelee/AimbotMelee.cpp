@@ -271,7 +271,7 @@ int CAimbotMelee::CanHit(Target_t& target, CTFPlayer* pLocal, CTFWeaponBase* pWe
 		flHull *= pLocal->m_flModelScale();
 	}
 	Vec3 vSwingMins = { -flHull, -flHull, -flHull };
-		Vec3 vSwingMaxs = { flHull, flHull, flHull };
+	Vec3 vSwingMaxs = { flHull, flHull, flHull };
 
 	std::deque<TickRecord> vRecords;
 	{
@@ -290,13 +290,8 @@ int CAimbotMelee::CanHit(Target_t& target, CTFPlayer* pLocal, CTFWeaponBase* pWe
 		if (!pRecords || vRecords.empty())
 		{
 			if (auto pBones = H::Entities.GetBones(target.m_pEntity->entindex()))
-			{
-					vRecords.push_front({
-						target.m_pEntity->m_flSimulationTime(),
-						*reinterpret_cast<BoneMatrix*>(pBones),
-						target.m_pEntity->m_vecOrigin()
-						});
-			}
+				vRecords.push_front({ target.m_pEntity->m_flSimulationTime(), *reinterpret_cast<BoneMatrix*>(pBones), target.m_pEntity->m_vecOrigin(),
+					target.m_pEntity->m_vecMins(), target.m_pEntity->m_vecMaxs() });
 			else
 			{
 					matrix3x4 aBones[MAXSTUDIOBONES];
@@ -310,6 +305,8 @@ int CAimbotMelee::CanHit(Target_t& target, CTFPlayer* pLocal, CTFWeaponBase* pWe
 						});
 
 
+				vRecords.push_front({ target.m_pEntity->m_flSimulationTime(), *reinterpret_cast<BoneMatrix*>(&aBones), target.m_pEntity->m_vecOrigin(),
+					target.m_pEntity->m_vecMins(), target.m_pEntity->m_vecMaxs() });
 			}
 		}
 	}
@@ -324,22 +321,23 @@ int CAimbotMelee::CanHit(Target_t& target, CTFPlayer* pLocal, CTFWeaponBase* pWe
 			tRecord.m_flSimTime -= TICKS_TO_TIME(vSimRecords.size());
 	}
 	vRecords = target.m_TargetType == ETargetType::Player ? F::Backtrack.GetValidRecords(&vRecords, pLocal, true) : vRecords;
-		if (!Vars::Backtrack::Enabled.Value && !vRecords.empty())
-			vRecords = { vRecords.front() };
+	if (!Vars::Backtrack::Enabled.Value && !vRecords.empty())
+		vRecords = { vRecords.front() };
 
-		CGameTrace trace = {};
-			CTraceFilterHitscan filter = {}; filter.pSkip = pLocal;
-			for (auto& tRecord : vRecords)
+	CGameTrace trace = {};
+	CTraceFilterHitscan filter = {}; filter.pSkip = pLocal;
+	for (auto& tRecord : vRecords)
 	{
-				Vec3 vRestoreOrigin = target.m_pEntity->GetAbsOrigin();
-					Vec3 vRestoreMins = target.m_pEntity->m_vecMins();
-					Vec3 vRestoreMaxs = target.m_pEntity->m_vecMaxs();
-					target.m_pEntity->SetAbsOrigin(tRecord.m_vOrigin);
-					target.m_pEntity->m_vecMins() = tRecord.m_vMins + 0.125f; // account for origin tolerance
-					target.m_pEntity->m_vecMaxs() = tRecord.m_vMaxs - 0.125f;
+		Vec3 vRestoreOrigin = target.m_pEntity->GetAbsOrigin();
+		Vec3 vRestoreMins = target.m_pEntity->m_vecMins();
+		Vec3 vRestoreMaxs = target.m_pEntity->m_vecMaxs();
 
-					Vec3 vDiff = { 0, 0, std::clamp(vEyePos.z - tRecord.m_vOrigin.z, target.m_pEntity->m_vecMins().z, target.m_pEntity->m_vecMaxs().z) };
-						target.m_vPos = tRecord.m_vOrigin + vDiff;
+		target.m_pEntity->SetAbsOrigin(tRecord.m_vOrigin);
+		target.m_pEntity->m_vecMins() = tRecord.m_vMins + 0.125f; // account for origin tolerance
+		target.m_pEntity->m_vecMaxs() = tRecord.m_vMaxs - 0.125f;
+
+		Vec3 vDiff = { 0, 0, std::clamp(vEyePos.z - tRecord.m_vOrigin.z, target.m_pEntity->m_vecMins().z, target.m_pEntity->m_vecMaxs().z) };
+		target.m_vPos = tRecord.m_vOrigin + vDiff;
 		target.m_vAngleTo = Aim(G::CurrentUserCmd->viewangles, Math::CalcAngle(vEyePos, target.m_vPos));
 
 		Vec3 vForward; Math::AngleVectors(target.m_vAngleTo, &vForward);
@@ -381,7 +379,7 @@ int CAimbotMelee::CanHit(Target_t& target, CTFPlayer* pLocal, CTFWeaponBase* pWe
 
 			SDK::Trace(vEyePos, vTraceEnd, MASK_SHOT | CONTENTS_GRATE, &filter, &trace);
 			if (trace.m_pEnt && trace.m_pEnt == target.m_pEntity)
-		
+
 				return 2;
 		}
 	}
@@ -507,7 +505,13 @@ void CAimbotMelee::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd
 			G::PathStorage.clear();
 
 			if (bLine)
-				G::LineStorage.push_back({ { vEyePos, target.m_vPos }, I::GlobalVars->curtime + 5.f, Vars::Colors::Bullet.Value, true });
+			{
+				Vec3 vEyePos = pLocal->GetShootPos();
+				float flDist = vEyePos.DistTo(target.m_vPos);
+				Vec3 vForward; Math::AngleVectors(target.m_vAngleTo, &vForward);
+
+				G::LineStorage.push_back({ { vEyePos, vEyePos + vForward * flDist }, I::GlobalVars->curtime + 5.f, Vars::Colors::Bullet.Value, true });
+			}
 			if (bBoxes)
 			{
 				auto vBoxes = F::Visuals.GetHitboxes(target.m_tRecord.m_BoneMatrix.m_aBones, target.m_pEntity->As<CBaseAnimating>());

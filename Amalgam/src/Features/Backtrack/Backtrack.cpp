@@ -90,6 +90,7 @@ void CBacktrack::UpdateDatagram()
 		m_dSequences.pop_back();
 }
 
+
 std::deque<TickRecord>* CBacktrack::GetRecords(CBaseEntity* pEntity)
 {
 	if (m_mRecords[pEntity].empty())
@@ -101,37 +102,39 @@ std::deque<TickRecord>* CBacktrack::GetRecords(CBaseEntity* pEntity)
 std::deque<TickRecord> CBacktrack::GetValidRecords(std::deque<TickRecord>* pRecords, CTFPlayer* pLocal, bool bDistance)
 {
 	std::deque<TickRecord> vRecords = {};
-		if (!pRecords || pRecords->empty())
-			return vRecords;
-		auto pNetChan = I::EngineClient->GetNetChannelInfo();
-		if (!pNetChan)
-			return vRecords;
-		float flCorrect = std::clamp(pNetChan->GetLatency(FLOW_OUTGOING) + ROUND_TO_TICKS(m_flFakeInterp) + ROUND_TO_TICKS(m_flFakeLatency), 0.f, m_flMaxUnlag) - pNetChan->GetLatency(FLOW_OUTGOING);
-		int iServerTick = m_iTickCount + G::AnticipatedChoke + Vars::Backtrack::Offset.Value;
+	if (!pRecords || pRecords->empty())
+		return vRecords;
 
-		for (auto& tRecord : *pRecords)
+	auto pNetChan = I::EngineClient->GetNetChannelInfo();
+	if (!pNetChan)
+		return vRecords;
+
+	float flCorrect = std::clamp(pNetChan->GetLatency(FLOW_OUTGOING) + ROUND_TO_TICKS(m_flFakeInterp) + ROUND_TO_TICKS(m_flFakeLatency), 0.f, m_flMaxUnlag) - pNetChan->GetLatency(FLOW_OUTGOING);
+	int iServerTick = m_iTickCount + G::AnticipatedChoke + Vars::Backtrack::Offset.Value;
+
+	for (auto& tRecord : *pRecords)
 	{
-			float flDelta = fabsf(flCorrect - TICKS_TO_TIME(iServerTick - TIME_TO_TICKS(tRecord.m_flSimTime)));
-				if (flDelta > float(Vars::Backtrack::Window.Value) / 1000)
+		float flDelta = fabsf(flCorrect - TICKS_TO_TIME(iServerTick - TIME_TO_TICKS(tRecord.m_flSimTime)));
+		if (flDelta > float(Vars::Backtrack::Window.Value) / 1000)
 			continue;
 
-			vRecords.push_back(tRecord);
+		vRecords.push_back(tRecord);
 	}
 
-		if (vRecords.empty())
-		{	// make sure there is at least 1 record
-				float flMinDelta = 0.2f;
-				for (auto& tRecord : *pRecords)
-				{
-						float flDelta = fabsf(flCorrect - TICKS_TO_TIME(iServerTick - TIME_TO_TICKS(tRecord.m_flSimTime)));
-						if (flDelta > flMinDelta)
-							continue;
-	
-						flMinDelta = flDelta;
-						vRecords = { tRecord };
-				}
+	if (vRecords.empty())
+	{	// make sure there is at least 1 record
+		float flMinDelta = 0.2f;
+		for (auto& tRecord : *pRecords)
+		{
+			float flDelta = fabsf(flCorrect - TICKS_TO_TIME(iServerTick - TIME_TO_TICKS(tRecord.m_flSimTime)));
+			if (flDelta > flMinDelta)
+				continue;
+
+			flMinDelta = flDelta;
+			vRecords = { tRecord };
 		}
-		else if (pLocal && vRecords.size() > 1)
+	}
+	else if (pLocal && vRecords.size() > 1)
 	{
 		if (bDistance)
 			std::sort(vRecords.begin(), vRecords.end(), [&](const TickRecord& a, const TickRecord& b) -> bool
@@ -155,7 +158,7 @@ std::deque<TickRecord> CBacktrack::GetValidRecords(std::deque<TickRecord>* pReco
 		}
 	}
 
-		return vRecords;
+	return vRecords;
 }
 
 

@@ -207,28 +207,62 @@ int CAimbotHitscan::GetHitboxPriority(int nHitbox, CTFPlayer* pLocal, CTFWeaponB
 		}
 	}
 
-	switch (nHitbox)
+	switch (H::Entities.GetModel(pTarget->entindex()))
 	{
-	case HITBOX_HEAD: return bHeadshot ? 0 : 2;
-	//case HITBOX_PELVIS: return 2;
-	case HITBOX_BODY:
-	case HITBOX_THORAX:
-	case HITBOX_CHEST:
-	case HITBOX_UPPER_CHEST: return bHeadshot ? 1 : 0;
-	/*
-	case HITBOX_RIGHT_HAND:
-	case HITBOX_LEFT_HAND:
-	case HITBOX_RIGHT_UPPER_ARM:
-	case HITBOX_RIGHT_FOREARM:
-	case HITBOX_LEFT_UPPER_ARM:
-	case HITBOX_LEFT_FOREARM:
-	case HITBOX_RIGHT_CALF:
-	case HITBOX_LEFT_CALF:
-	case HITBOX_RIGHT_FOOT:
-	case HITBOX_LEFT_FOOT:
-	case HITBOX_RIGHT_THIGH:
-	case HITBOX_LEFT_THIGH:
-	*/
+	case FNV1A::Hash32Const("models/vsh/player/saxton_hale.mdl"):
+	{
+		switch (nHitbox)
+		{
+		case HITBOX_SAXTON_HEAD: return bHeadshot ? 0 : 2;
+		//case HITBOX_SAXTON_NECK:
+		//case HITBOX_SAXTON_PELVIS: return 2;
+		case HITBOX_SAXTON_BODY:
+		case HITBOX_SAXTON_THORAX:
+		case HITBOX_SAXTON_CHEST:
+		case HITBOX_SAXTON_UPPER_CHEST: return bHeadshot ? 1 : 0;
+		/*
+		case HITBOX_SAXTON_LEFT_UPPER_ARM:
+		case HITBOX_SAXTON_LEFT_FOREARM:
+		case HITBOX_SAXTON_LEFT_HAND:
+		case HITBOX_SAXTON_RIGHT_UPPER_ARM:
+		case HITBOX_SAXTON_RIGHT_FOREARM:
+		case HITBOX_SAXTON_RIGHT_HAND:
+		case HITBOX_SAXTON_LEFT_THIGH:
+		case HITBOX_SAXTON_LEFT_CALF:
+		case HITBOX_SAXTON_LEFT_FOOT:
+		case HITBOX_SAXTON_RIGHT_THIGH:
+		case HITBOX_SAXTON_RIGHT_CALF:
+		case HITBOX_SAXTON_RIGHT_FOOT:
+		*/
+		}
+		break;
+	}
+	default:
+	{
+		switch (nHitbox)
+		{
+		case HITBOX_HEAD: return bHeadshot ? 0 : 2;
+		//case HITBOX_PELVIS: return 2;
+		case HITBOX_BODY:
+		case HITBOX_THORAX:
+		case HITBOX_CHEST:
+		case HITBOX_UPPER_CHEST: return bHeadshot ? 1 : 0;
+		/*
+		case HITBOX_LEFT_UPPER_ARM:
+		case HITBOX_LEFT_FOREARM:
+		case HITBOX_LEFT_HAND:
+		case HITBOX_RIGHT_UPPER_ARM:
+		case HITBOX_RIGHT_FOREARM:
+		case HITBOX_RIGHT_HAND:
+		case HITBOX_LEFT_THIGH:
+		case HITBOX_LEFT_CALF:
+		case HITBOX_LEFT_FOOT:
+		case HITBOX_RIGHT_THIGH:
+		case HITBOX_RIGHT_CALF:
+		case HITBOX_RIGHT_FOOT:
+		*/
+		}
+	}
 	}
 
 	return 2;
@@ -261,13 +295,7 @@ int CAimbotHitscan::CanHit(Target_t& target, CTFPlayer* pLocal, CTFWeaponBase* p
 		if (!pRecords || vRecords.empty())
 		{
 			if (auto pBones = H::Entities.GetBones(target.m_pEntity->entindex()))
-			{
-					vRecords.push_front({
-						target.m_pEntity->m_flSimulationTime(),
-						*reinterpret_cast<BoneMatrix*>(pBones),
-						target.m_pEntity->m_vecOrigin()
-						});
-			}
+				vRecords.push_front({ target.m_pEntity->m_flSimulationTime(), *reinterpret_cast<BoneMatrix*>(pBones), target.m_pEntity->m_vecOrigin() });
 			else
 			{
 					matrix3x4 aBones[MAXSTUDIOBONES];
@@ -279,7 +307,7 @@ int CAimbotHitscan::CanHit(Target_t& target, CTFPlayer* pLocal, CTFWeaponBase* p
 							*reinterpret_cast<BoneMatrix*>(&aBones),
 							target.m_pEntity->m_vecOrigin()
 						});
-
+				vRecords.push_front({ target.m_pEntity->m_flSimulationTime(), *reinterpret_cast<BoneMatrix*>(&aBones), target.m_pEntity->m_vecOrigin() });
 			}
 		}
 	}
@@ -324,7 +352,7 @@ int CAimbotHitscan::CanHit(Target_t& target, CTFPlayer* pLocal, CTFWeaponBase* p
 					std::vector<std::pair<const mstudiobbox_t*, int>> primary, secondary, tertiary; // dumb
 					for (int nHitbox = 0; nHitbox < target.m_pEntity->As<CTFPlayer>()->GetNumOfHitboxes(); nHitbox++)
 					{
-						if (!F::AimbotGlobal.IsHitboxValid(nHitbox, Vars::Aimbot::Hitscan::Hitboxes.Value))
+						if (!F::AimbotGlobal.IsHitboxValid(H::Entities.GetModel(target.m_pEntity->entindex()), nHitbox, Vars::Aimbot::Hitscan::Hitboxes.Value))
 							continue;
 
 						auto pBox = pSet->pHitbox(nHitbox);
@@ -755,7 +783,13 @@ void CAimbotHitscan::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pC
 				G::PathStorage.clear();
 
 				if (bLine)
-					G::LineStorage.push_back({ { pLocal->GetShootPos(), target.m_vPos }, I::GlobalVars->curtime + 5.f, Vars::Colors::Bullet.Value, true });
+				{
+					Vec3 vEyePos = pLocal->GetShootPos();
+					float flDist = vEyePos.DistTo(target.m_vPos);
+					Vec3 vForward; Math::AngleVectors(target.m_vAngleTo, &vForward);
+
+					G::LineStorage.push_back({ { vEyePos, vEyePos + vForward * flDist }, I::GlobalVars->curtime + 5.f, Vars::Colors::Bullet.Value, true });
+				}
 				if (bBoxes)
 				{
 					auto vBoxes = F::Visuals.GetHitboxes(target.m_tRecord.m_BoneMatrix.m_aBones, target.m_pEntity->As<CBaseAnimating>(), {}, target.m_nAimedHitbox);
