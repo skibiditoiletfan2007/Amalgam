@@ -937,50 +937,25 @@ void CESP::DrawPlayers()
 
 		if (tCache.m_bHealthBar)
 		{
-			// Draw black transparent background (extends 1 pixel on each side)
-			H::Draw.FillRect(
-				x - H::Draw.Scale(7), // Extend 1 pixel to the left
-				y - 1,                // Extend 1 pixel upwards
-				H::Draw.Scale(4),     // Extend width by 2 pixels (1 on each side)
-				h + 2,                // Extend height by 2 pixels (1 on each side)
-				{ 0, 0, 0, 200 });    // Black with 200 alpha
-
 			if (tCache.m_flHealth > 1.f)
 			{
-				// Draw the good health indicator
 				Color_t cColor = Vars::Colors::IndicatorGood.Value;
-				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2), h, 1.f, cColor, { 0, 0, 0, 0 }, ALIGN_BOTTOM, false);
+				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, 1.f, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
 
-				// Draw the remaining health above 1.f
 				cColor = Vars::Colors::IndicatorMisc.Value;
-				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2), h, tCache.m_flHealth - 1.f, cColor, { 0, 0, 0, 0 }, ALIGN_BOTTOM, false);
+				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, tCache.m_flHealth - 1.f, cColor, { 0, 0, 0, 0 }, ALIGN_BOTTOM, true);
 			}
 			else
 			{
-				// Draw the health with gradient from bad to good
 				Color_t cColor = Vars::Colors::IndicatorBad.Value.Lerp(Vars::Colors::IndicatorGood.Value, tCache.m_flHealth);
-				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2), h, tCache.m_flHealth, cColor, { 0, 0, 0, 0 }, ALIGN_BOTTOM, false);
+				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(1, Scale_Round), h, tCache.m_flHealth, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
 			}
-
 			lOffset += H::Draw.Scale(6);
 		}
 
-
 		if (tCache.m_bUberBar)
 		{
-			// Draw black transparent background (1-pixel extension on all sides)
-			H::Draw.FillRect(
-				x - 1,                   // Extend 1 pixel left
-				y + h + H::Draw.Scale(3), // Position adjusted for 1-pixel up
-				w + 2,                   // Width extended by 2 pixels
-				H::Draw.Scale(2) + 2,    // Height is 2 pixels + 2 (1 pixel top and bottom)
-				{ 0, 0, 0, 200 });       // Black background with 200 alpha
-
-			// Draw the Uber bar
-			H::Draw.FillRectPercent(
-				x, y + h + H::Draw.Scale(4), w, H::Draw.Scale(2),
-				tCache.m_flUber, Vars::Colors::IndicatorMisc.Value);
-
+			H::Draw.FillRectPercent(x, y + h + H::Draw.Scale(4), w, 1, tCache.m_flUber, Vars::Colors::IndicatorMisc.Value);
 			bOffset += H::Draw.Scale(6);
 		}
 
@@ -1033,7 +1008,6 @@ void CESP::DrawBuildings()
 
 	const auto& fFont = H::Fonts.GetFont(FONT_ESP);
 	const int nTall = fFont.m_nTall + H::Draw.Scale(2);
-
 	for (auto& [pEntity, tCache] : m_mBuildingCache)
 	{
 		float x, y, w, h;
@@ -1046,31 +1020,16 @@ void CESP::DrawBuildings()
 
 		I::MatSystemSurface->DrawSetAlphaMultiplier(tCache.m_flAlpha);
 
-		// Draw bounding box if enabled
 		if (tCache.m_bBox)
 			H::Draw.LineRectOutline(x, y, w, h, tCache.m_tColor, { 0, 0, 0, 255 });
 
-		// Draw health bar with 1-pixel extended background
 		if (tCache.m_bHealthBar)
 		{
-			// Draw black transparent background (extends 1 pixel each side)
-			H::Draw.FillRect(
-				x - H::Draw.Scale(7), // Extend 1 pixel left
-				y - 1,                // Extend 1 pixel up
-				H::Draw.Scale(4),     // Width extended by 2 pixels (1 on each side)
-				h + 2,                // Height extended by 2 pixels (1 on each side)
-				{ 0, 0, 0, 200 });    // Black background with 200 alpha
-
-			// Draw health bar
 			Color_t cColor = Vars::Colors::IndicatorBad.Value.Lerp(Vars::Colors::IndicatorGood.Value, tCache.m_flHealth);
-			H::Draw.FillRectPercent(
-				x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h,
-				tCache.m_flHealth, cColor, { 0, 0, 0, 0 }, ALIGN_BOTTOM, true);
-
+			H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, 1, h, tCache.m_flHealth, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
 			lOffset += H::Draw.Scale(6);
 		}
 
-		// Draw text (top, bottom, right, health)
 		int iVerticalOffset = H::Draw.Scale(3, Scale_Floor) - 1;
 		for (auto& [iMode, sText, tColor, tOutline] : tCache.m_vText)
 		{
