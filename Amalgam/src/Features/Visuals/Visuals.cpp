@@ -37,39 +37,57 @@ void CVisuals::DrawFOV(CTFPlayer* pLocal)
 
 void CVisuals::DrawTicks(CTFPlayer* pLocal)
 {
+	// Check if the Ticks indicator is enabled in the menu
 	if (!(Vars::Menu::Indicators.Value & Vars::Menu::IndicatorsEnum::Ticks))
 		return;
 
+	// Check if the player is alive
 	if (!pLocal->IsAlive())
 		return;
 
+	// Get the position and font for drawing
 	const DragBox_t dtPos = Vars::Menu::TicksDisplay.Value;
 	const auto& fFont = H::Fonts.GetFont(FONT_INDICATORS);
 
-	if (!F::Ticks.m_bSpeedhack)
+	// Calculate the ticks and progress ratio using new logic
+	int iChoke = std::max(I::ClientState->chokedcommands - (F::AntiAim.YawOn() ? F::AntiAim.AntiAimTicks() : 0), 0);
+	int iTicks = std::clamp(F::Ticks.m_iShiftedTicks + iChoke, 0, F::Ticks.m_iMaxShift);
+	float flRatio = float(iTicks) / F::Ticks.m_iMaxShift;
+
+	// Dimensions for the progress bar
+	int iSizeX = H::Draw.Scale(100, Scale_Round);  // Width
+	int iSizeY = H::Draw.Scale(13, Scale_Round);   // Height
+	int iPosX = dtPos.x - iSizeX / 2;              // Centered X position
+	int iPosY = dtPos.y + fFont.m_nTall + H::Draw.Scale(4); // Adjusted Y position
+
+	// Rounded corner radius
+	int cornerRadius = H::Draw.Scale(5, Scale_Round);
+
+	// Draw tick count text
+	H::Draw.String(fFont, dtPos.x, dtPos.y + 2,
+		Vars::Menu::Theme::Active.Value, ALIGN_TOP,
+		std::format("Ticks {} / {}", iTicks, F::Ticks.m_iMaxShift).c_str());
+
+	// Display "Not Ready" if waiting for shift
+	if (F::Ticks.m_iWait)
 	{
-		int iChoke = std::max(I::ClientState->chokedcommands - (F::AntiAim.YawOn() ? F::AntiAim.AntiAimTicks() : 0), 0);
-		int iTicks = std::clamp(F::Ticks.m_iShiftedTicks + iChoke, 0, F::Ticks.m_iMaxShift);
-		float flRatio = float(iTicks) / F::Ticks.m_iMaxShift;
-		int iSizeX = H::Draw.Scale(100, Scale_Round), iSizeY = H::Draw.Scale(12, Scale_Round);
-		int iPosX = dtPos.x - iSizeX / 2, iPosY = dtPos.y + fFont.m_nTall + H::Draw.Scale(4) + 1;
-
-		H::Draw.StringOutlined(fFont, dtPos.x, dtPos.y + 2, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOP, std::format("Ticks {} / {}", iTicks, F::Ticks.m_iMaxShift).c_str());
-		if (F::Ticks.m_iWait)
-			H::Draw.StringOutlined(fFont, dtPos.x, dtPos.y + fFont.m_nTall + H::Draw.Scale(18, Scale_Round) + 1, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOP, "Not Ready");
-
-		H::Draw.LineRoundRect(iPosX, iPosY, iSizeX, iSizeY, H::Draw.Scale(3, Scale_Round), Vars::Menu::Theme::Accent.Value, 16);
-		if (flRatio)
-		{
-			iSizeX -= H::Draw.Scale(2, Scale_Ceil) * 2, iSizeY -= H::Draw.Scale(2, Scale_Ceil) * 2;
-			iPosX += H::Draw.Scale(2, Scale_Round), iPosY += H::Draw.Scale(2, Scale_Round);
-			H::Draw.StartClipping(iPosX, iPosY, iSizeX * flRatio, iSizeY);
-			H::Draw.FillRoundRect(iPosX, iPosY, iSizeX, iSizeY, H::Draw.Scale(3, Scale_Round), Vars::Menu::Theme::Accent.Value, 16);
-			H::Draw.EndClipping();
-		}
+		H::Draw.String(fFont, dtPos.x, dtPos.y + fFont.m_nTall + H::Draw.Scale(18, Scale_Round),
+			Vars::Menu::Theme::Active.Value, ALIGN_TOP, "Not Ready");
 	}
-	else
-		H::Draw.StringOutlined(fFont, dtPos.x, dtPos.y + 2, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOP, std::format("Speedhack x{}", Vars::CL_Move::SpeedFactor.Value).c_str());
+
+	// Draw the background of the progress bar
+	H::Draw.FillRoundRect(iPosX, iPosY, iSizeX, iSizeY, cornerRadius, Vars::Menu::Theme::Background.Value);
+
+	// Draw the progress bar based on ratio
+	if (flRatio > 0.0f)
+	{
+		int progressSizeX = iSizeX - H::Draw.Scale(4, Scale_Round);
+		int progressSizeY = iSizeY - H::Draw.Scale(4, Scale_Round);
+		int progressPosX = iPosX + H::Draw.Scale(2, Scale_Round);
+		int progressPosY = iPosY + H::Draw.Scale(2, Scale_Round);
+
+		H::Draw.FillRoundRect(progressPosX, progressPosY, progressSizeX * flRatio, progressSizeY, cornerRadius, Vars::Menu::Theme::Accent.Value);
+	}
 }
 
 void CVisuals::DrawPing(CTFPlayer* pLocal)
