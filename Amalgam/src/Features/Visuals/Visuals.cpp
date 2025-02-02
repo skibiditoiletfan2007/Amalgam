@@ -24,7 +24,7 @@ MAKE_SIGNATURE(CWeaponMedigun_ManageChargeEffect, "client.dll", "48 89 5C 24 ? 4
 
 void CVisuals::DrawFOV(CTFPlayer* pLocal)
 {
-	if (!Vars::Aimbot::General::FOVCircle.Value || !Vars::Colors::FOVCircle.Value.a || !pLocal->IsAlive() || pLocal->IsAGhost() || pLocal->IsTaunting() || pLocal->IsStunned() || pLocal->IsInBumperKart())
+	if (!Vars::Aimbot::General::FOVCircle.Value || !Vars::Colors::FOVCircle.Value.a || !pLocal->IsAlive() || pLocal->IsAGhost() || pLocal->IsTaunting() || pLocal->InCond(TF_COND_STUNNED) && pLocal->m_iStunFlags() & (TF_STUN_CONTROLS | TF_STUN_LOSER_STATE) || pLocal->InCond(TF_COND_HALLOWEEN_KART))
 		return;
 
 	if (Vars::Aimbot::General::AimFOV.Value >= 90.f)
@@ -178,7 +178,6 @@ void CVisuals::ProjectileTrace(CTFPlayer* pPlayer, CTFWeaponBase* pWeapon, const
 			return;
 
 		pWeapon = pPlayer->m_hActiveWeapon().Get()->As<CTFWeaponBase>();
-		if (!pWeapon)
 		if (!pWeapon || pWeapon->GetWeaponID() == TF_WEAPON_FLAMETHROWER)
 			return;
 
@@ -536,27 +535,27 @@ void CVisuals::DrawDebugInfo(CTFPlayer* pLocal)
 			Vec3 vVelocity = pLocal->m_vecVelocity();
 			H::Draw.String(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, ALIGN_TOPLEFT, std::format("Velocity: {:.3f} ({:.3f}, {:.3f}, {:.3f})", vVelocity.Length(), vVelocity.x, vVelocity.y, vVelocity.z).c_str());
 		}
-		H::Draw.String(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, ALIGN_TOPLEFT, std::format("Choke: {}, {}", G::Choking, I::ClientState->chokedcommands).c_str());
-		H::Draw.String(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, ALIGN_TOPLEFT, std::format("Ticks: {}, {}", F::Ticks.m_iShiftedTicks, F::Ticks.m_iShiftedGoal).c_str());
-		H::Draw.String(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, ALIGN_TOPLEFT, std::format("Round state: {}, {}", SDK::GetRoundState(), I::EngineClient->IsPlayingDemo()).c_str());
-		H::Draw.String(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, ALIGN_TOPLEFT, std::format("Tickcount: {}", pLocal->m_nTickBase()).c_str());
-		H::Draw.String(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, ALIGN_TOPLEFT, std::format("Entities: {} ({}, {})", I::ClientEntityList->GetMaxEntities(), I::ClientEntityList->GetHighestEntityIndex(), I::ClientEntityList->NumberOfEntities(false)).c_str());
+		H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOPLEFT, std::format("Choke: {}, {}", G::Choking, I::ClientState->chokedcommands).c_str());
+		H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOPLEFT, std::format("Ticks: {}, {}", F::Ticks.m_iShiftedTicks, F::Ticks.m_iShiftedGoal).c_str());
+		H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOPLEFT, std::format("Round state: {}, {}, {}", SDK::GetRoundState(), SDK::GetWinningTeam(), I::EngineClient->IsPlayingDemo()).c_str());
+		H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOPLEFT, std::format("Tickcount: {}", pLocal->m_nTickBase()).c_str());
+		H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOPLEFT, std::format("Entities: {} ({}, {})", I::ClientEntityList->GetMaxEntities(), I::ClientEntityList->GetHighestEntityIndex(), I::ClientEntityList->NumberOfEntities(false)).c_str());
 	
 		if (pWeapon)
 		{
 
-		float flTime = TICKS_TO_TIME(pLocal->m_nTickBase());
-		float flPrimaryAttack = pWeapon->m_flNextPrimaryAttack();
-		float flSecondaryAttack = pWeapon->m_flNextSecondaryAttack();
-		float flAttack = pLocal->m_flNextAttack();
+			float flTime = TICKS_TO_TIME(pLocal->m_nTickBase());
+			float flPrimaryAttack = pWeapon->m_flNextPrimaryAttack();
+			float flSecondaryAttack = pWeapon->m_flNextSecondaryAttack();
+			float flAttack = pLocal->m_flNextAttack();
 
-		H::Draw.String(fFont, x, y += nTall * 2, Vars::Menu::Theme::Active.Value, ALIGN_TOPLEFT, std::format("Attacking: {}", G::Attacking).c_str());
-		H::Draw.String(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, ALIGN_TOPLEFT, std::format("CanPrimaryAttack: {} ([{:.3f} | {:.3f}] <= {:.3f})", G::CanPrimaryAttack, flPrimaryAttack, flAttack, flTime).c_str());
-		H::Draw.String(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, ALIGN_TOPLEFT, std::format("CanSecondaryAttack: {} ([{:.3f} | {:.3f}] <= {:.3f})", G::CanSecondaryAttack, flSecondaryAttack, flAttack, flTime).c_str());
-		H::Draw.String(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, ALIGN_TOPLEFT, std::format("Attack: {:.3f}, {:.3f}; {:.3f}", flTime - flPrimaryAttack, flTime - flSecondaryAttack, flTime - flAttack).c_str());
-		H::Draw.String(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, ALIGN_TOPLEFT, std::format("Reload: {} ({} || {} != 0)", G::Reloading, pWeapon->m_bInReload(), pWeapon->m_iReloadMode()).c_str());
+			H::Draw.StringOutlined(fFont, x, y += nTall * 2, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOPLEFT, std::format("Attacking: {}", G::Attacking).c_str());
+			H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOPLEFT, std::format("CanPrimaryAttack: {} ([{:.3f} | {:.3f}] <= {:.3f})", G::CanPrimaryAttack, flPrimaryAttack, flAttack, flTime).c_str());
+			H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOPLEFT, std::format("CanSecondaryAttack: {} ([{:.3f} | {:.3f}] <= {:.3f})", G::CanSecondaryAttack, flSecondaryAttack, flAttack, flTime).c_str());
+			H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOPLEFT, std::format("Attack: {:.3f}, {:.3f}; {:.3f}", flTime - flPrimaryAttack, flTime - flSecondaryAttack, flTime - flAttack).c_str());
+			H::Draw.StringOutlined(fFont, x, y += nTall, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value, ALIGN_TOPLEFT, std::format("Reload: {} ({} || {} != 0)", G::Reloading, pWeapon->m_bInReload(), pWeapon->m_iReloadMode()).c_str());
+		}
 	}
-}
 }
 #undef PAIR
 
@@ -757,7 +756,7 @@ void CVisuals::RenderBox(const Vec3& vPos, const Vec3& vMins, const Vec3& vMaxs,
 
 void CVisuals::FOV(CTFPlayer* pLocal, CViewSetup* pView)
 {
-	int iFOV = pLocal->IsScoped() ? Vars::Visuals::UI::ZoomFieldOfView.Value : Vars::Visuals::UI::FieldOfView.Value;
+	int iFOV = pLocal->InCond(TF_COND_ZOOMED) ? Vars::Visuals::UI::ZoomFieldOfView.Value : Vars::Visuals::UI::FieldOfView.Value;
 	pView->fov = pLocal->m_iFOV() = iFOV ? iFOV : pView->fov;
 
 	int iDefault = Vars::Visuals::UI::FieldOfView.Value;
@@ -779,8 +778,8 @@ void CVisuals::ThirdPerson(CTFPlayer* pLocal, CViewSetup* pView)
 	if (!pLocal->IsAlive())
 		return I::Input->CAM_ToFirstPerson();
 
-	const bool bZoom = pLocal->IsScoped() && (!Vars::Visuals::Removals::Scope.Value || Vars::Visuals::UI::ZoomFieldOfView.Value < 20);
-	const bool bForce = pLocal->IsTaunting() || pLocal->IsAGhost() || pLocal->IsInBumperKart() || pLocal->InCond(TF_COND_HALLOWEEN_THRILLER);
+	const bool bZoom = pLocal->InCond(TF_COND_ZOOMED) && (!Vars::Visuals::Removals::Scope.Value || Vars::Visuals::UI::ZoomFieldOfView.Value < 20);
+	const bool bForce = pLocal->IsTaunting() || pLocal->IsAGhost() || pLocal->InCond(TF_COND_HALLOWEEN_KART) || pLocal->InCond(TF_COND_HALLOWEEN_THRILLER);
 	//if (bForce)
 	//	return;
 
@@ -798,17 +797,20 @@ void CVisuals::ThirdPerson(CTFPlayer* pLocal, CViewSetup* pView)
 	{	// Thirdperson offset
 		Vec3 vForward, vRight, vUp; Math::AngleVectors(pView->angles, &vForward, &vRight, &vUp);
 
-		Vec3 offset;
-		offset += vRight * Vars::Visuals::ThirdPerson::Right.Value;
-		offset += vUp * Vars::Visuals::ThirdPerson::Up.Value;
-		offset -= vForward * Vars::Visuals::ThirdPerson::Distance.Value;
+		Vec3 vOffset;
+		float flScale = Vars::Visuals::ThirdPerson::Scale.Value ? pLocal->m_flModelScale() : 1.f;
+		vOffset += vRight * Vars::Visuals::ThirdPerson::Right.Value * flScale;
+		vOffset += vUp * Vars::Visuals::ThirdPerson::Up.Value * flScale;
+		vOffset -= vForward * Vars::Visuals::ThirdPerson::Distance.Value * flScale;
+		float flHull = 9.f * flScale;
+		Vec3 vMins = { -flHull, -flHull, -flHull }, vMaxs = { flHull, flHull, flHull };
+		Vec3 vDiff = pView->origin - pLocal->GetEyePosition();
 
-		const Vec3 viewDiff = pView->origin - pLocal->GetEyePosition();
 		CGameTrace trace = {};
 		CTraceFilterWorldAndPropsOnly filter = {};
-		SDK::TraceHull(pView->origin - viewDiff, pView->origin + offset - viewDiff, { -9.f, -9.f, -9.f }, { 9.f, 9.f, 9.f }, MASK_SOLID, &filter, &trace);
+		SDK::TraceHull(pView->origin - vDiff, pView->origin + vOffset - vDiff, vMins, vMaxs, MASK_SOLID, &filter, &trace);
 
-		pView->origin += offset * trace.fraction - viewDiff;
+		pView->origin += vOffset * trace.fraction - vDiff;
 	}
 }
 

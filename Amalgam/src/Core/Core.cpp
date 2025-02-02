@@ -10,13 +10,22 @@
 #include "../SDK/Events/Events.h"
 
 
+void CCore::AppendFailText(const char* sMessage)
+{
+	ssFailStream << std::format("{}\n", sMessage);
+	OutputDebugStringA(std::format("{}\n", sMessage).c_str());
+}
+
 void CCore::Load()
 {
 	while (!U::Memory.FindSignature("client.dll", "48 8B 0D ? ? ? ? 48 8B 10 48 8B 19 48 8B C8 FF 92"))
 	{
 		Sleep(500);
 		if (m_bUnload = m_bFailed = U::KeyHandler.Down(VK_F11, true))
+		{
+			U::Core.AppendFailText("Cancelled load");
 			return;
+		}
 	}
 	Sleep(500);
 
@@ -52,12 +61,22 @@ void CCore::Unload()
 {
 	if (m_bFailed)
 	{
-		SDK::Output("Amalgam", "Failed", {}, false, false, false, true, MB_OK);
+		ssFailStream << "\nCtrl + C to copy. Logged to Amalgam\\fail_log.txt. (1)\n";
+		ssFailStream << "Built @ " __DATE__ ", " __TIME__;
+
+		SDK::Output("Failed to load", ssFailStream.str().c_str(), {}, false, false, false, true, MB_OK | MB_ICONERROR);
+
+		ssFailStream << "\n\n\n\n";
+		std::ofstream file;
+		file.open(F::Configs.sConfigPath + "\\fail_log.txt", std::ios_base::app);
+		file << ssFailStream.str();
+		file.close();
+
 		return;
 	}
 
 	G::Unload = true;
-	U::Hooks.Unload();
+	m_bFailed2 = !U::Hooks.Unload();
 	U::BytePatches.Unload();
 	H::Events.Unload();
 
@@ -83,8 +102,19 @@ void CCore::Unload()
 
 	if (m_bFailed2)
 	{
-		SDK::Output("Amalgam", "Failed", {}, false, false, false, true, true);
+		ssFailStream << "\nCtrl + C to copy. Logged to Amalgam\\fail_log.txt. (2)\n";
+		ssFailStream << "Built @ " __DATE__ ", " __TIME__;
+
+		SDK::Output("Failed to load", ssFailStream.str().c_str(), {}, false, false, false, true, MB_OK | MB_ICONERROR);
+
+		ssFailStream << "\n\n\n\n";
+		std::ofstream file;
+		file.open(F::Configs.sConfigPath + "\\fail_log.txt", std::ios_base::app);
+		file << ssFailStream.str();
+		file.close();
+
 		return;
 	}
+
 	SDK::Output("Amalgam", "Unloaded", { 175, 150, 255, 255 }, true, false, false, true);
 }

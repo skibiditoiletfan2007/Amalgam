@@ -129,7 +129,7 @@ void CMenu::MenuAimbot()
 				TableNextColumn();
 				if (Section("General"))
 				{
-					FDropdown("Aim type", Vars::Aimbot::General::AimType, { "Off", "Plain", "Smooth", "Silent" }, {}, FDropdown_Left);
+					FDropdown("Aim type", Vars::Aimbot::General::AimType, { "Off", "Plain", "Smooth", "Silent", "Locking" }, {}, FDropdown_Left);
 					FDropdown("Target selection", Vars::Aimbot::General::TargetSelection, { "FOV", "Distance" }, {}, FDropdown_Right);
 					FDropdown("Target", Vars::Aimbot::General::Target, { "Players", "Sentries", "Dispensers", "Teleporters", "Stickies", "NPCs", "Bombs" }, {}, FDropdown_Multi | FDropdown_Left);
 					FDropdown("Ignore", Vars::Aimbot::General::Ignore, { "Friends", "Party", "Invulnerable", "Cloaked", "Unsimulated players", "Dead Ringer", "Vaccinator", "Disguised", "Taunting" }, {}, FDropdown_Multi | FDropdown_Right);
@@ -205,7 +205,7 @@ void CMenu::MenuAimbot()
 					FDropdown("Splash", Vars::Aimbot::Projectile::SplashPrediction, { "Off", "Include", "Prefer", "Only" }, {}, FDropdown_Right);
 					FDropdown("Auto detonate", Vars::Aimbot::Projectile::AutoDetonate, { "Stickies", "Flares" }, {}, FDropdown_Multi | FDropdown_Left);
 					FDropdown("Auto airblast", Vars::Aimbot::Projectile::AutoAirblast, { "Off", "Legit", "Rage" }, {}, FDropdown_Right);
-					FDropdown("Modifiers## Projectile", Vars::Aimbot::Projectile::Modifiers, { "Charge shot", "Cancel charge", "Bodyaim if lethal", "Use prime time" }, {}, FDropdown_Multi);
+					FDropdown("Modifiers## Projectile", Vars::Aimbot::Projectile::Modifiers, { "Charge shot", "Cancel charge", "Bodyaim if lethal", "Use prime time", "Aim blast at feet" }, {}, FDropdown_Multi);
 					FSlider("Max simulation time", Vars::Aimbot::Projectile::PredictionTime, 0.1f, 10.f, 0.25f, "%gs", FSlider_Min | FSlider_Precision);
 					PushTransparent(!FGet(Vars::Aimbot::Projectile::StrafePrediction));
 						FSlider("Hit chance", Vars::Aimbot::Projectile::Hitchance, 0.f, 100.f, 5.f, "%g%%", FSlider_Clamp | FSlider_Precision);
@@ -285,7 +285,9 @@ void CMenu::MenuAimbot()
 				{
 					if (Section("debug## melee"))
 					{
-						FSlider("swing ticks", Vars::Aimbot::Melee::SwingTicks, 10, 14);
+						FSlider("swing ticks", Vars::Aimbot::Melee::SwingTicks, 10, 14, 1, "%i", FSlider_Left);
+						FToggle("swing predict lag", Vars::Aimbot::Melee::SwingPredictLag, FToggle_Right);
+						SetCursorPosY(GetCursorPosY() + 8);
 						FToggle("backstab account ping", Vars::Aimbot::Melee::BackstabAccountPing, FToggle_Left);
 						FToggle("backstab double test", Vars::Aimbot::Melee::BackstabDoubleTest, FToggle_Right);
 					}
@@ -310,6 +312,7 @@ void CMenu::MenuAimbot()
 					FSlider("Tick limit", Vars::CL_Move::Doubletap::TickLimit, 2, 22, 1, "%i", FSlider_Clamp);
 					FSlider("Warp rate", Vars::CL_Move::Doubletap::WarpRate, 2, 22, 1, "%i", FSlider_Clamp);
 					FSlider("Passive recharge", Vars::CL_Move::Doubletap::PassiveRecharge, 0, 67, 1, "%i", FSlider_Clamp);
+					FSlider("Recharge limit", Vars::CL_Move::Doubletap::RechargeLimit, 1, 24, 1, "%i", FSlider_Clamp);
 				} EndSection();
 				if (Section("Fakelag"))
 				{
@@ -851,6 +854,13 @@ void CMenu::MenuVisuals()
 					FSlider("Thirdperson right", Vars::Visuals::ThirdPerson::Right, -500.f, 500.f, 5.f, "%g", FSlider_Precision);
 					FSlider("Thirdperson up", Vars::Visuals::ThirdPerson::Up, -500.f, 500.f, 5.f, "%g", FSlider_Precision);
 				} EndSection();
+				if (Vars::Debug::Info.Value)
+				{
+					if (Section("debug"))
+					{
+						FToggle("thirdperson scales", Vars::Visuals::ThirdPerson::Scale);
+					} EndSection();
+				}
 				if (Section("Out of FOV arrows"))
 				{
 					FToggle("Enabled", Vars::Visuals::FOVArrows::Enabled);
@@ -1717,9 +1727,9 @@ void CMenu::MenuSettings()
 							if (bEdit)
 								CurrentBind = CurrentBind != _iBind ? _iBind : DEFAULT_BIND;
 							if (bVisibility)
-								F::Binds.vBinds[_iBind].Visible = !_tBind.Visible;
+								_tBind.Visible = !_tBind.Visible;
 							if (bNot)
-								F::Binds.vBinds[_iBind].Not = !_tBind.Not;
+								_tBind.Not = !_tBind.Not;
 
 							y = getBinds(_iBind, x + 1, y);
 						}
@@ -2421,8 +2431,8 @@ void CMenu::DrawBinds()
 {
 	using namespace ImGui;
 
-	// Exit conditions
-	if (IsOpen ? !FGet(Vars::Menu::ShowBinds) : !Vars::Menu::ShowBinds.Value || I::EngineVGui->IsGameUIVisible() || I::MatSystemSurface->IsCursorVisible() && !I::EngineClient->IsPlayingDemo())
+	if (IsOpen ? false : !Vars::Menu::ShowBinds.Value || I::EngineVGui->IsGameUIVisible() || I::MatSystemSurface->IsCursorVisible() && !I::EngineClient->IsPlayingDemo())
+
 		return;
 
 	// Handle draggable window position
@@ -2444,7 +2454,7 @@ void CMenu::DrawBinds()
 				if (iParent != tBind.Parent)
 					continue;
 
-				if (tBind.Visible)
+				if (tBind.Visible || IsOpen)
 				{
 					// Prepare bind information
 					std::string info;
