@@ -1539,12 +1539,13 @@ void CMenu::MenuSettings()
 							if (FButton(std::format("Parent: {}", sParent).c_str(), FButton_Right | FButton_SameLine | FButton_NoUpper, { 0, 40 }))
 								bParent = 2;
 						}
-						FDropdown("Type", &tBind.Type, { "Key", "Class", "Weapon type" }, {}, FDropdown_Left);
+						FDropdown("Type", &tBind.Type, { "Key", "Class", "Weapon type", "Item slot" }, {}, FDropdown_Left);
 						switch (tBind.Type)
 						{
-						case 0: tBind.Info = std::min(tBind.Info, 2); FDropdown("Behavior", &tBind.Info, { "Hold", "Toggle", "Double click" }, {}, FDropdown_Right); break;
-						case 1: tBind.Info = std::min(tBind.Info, 8); FDropdown("Class", &tBind.Info, { "Scout", "Soldier", "Pyro", "Demoman", "Heavy", "Engineer", "Medic", "Sniper", "Spy" }, {}, FDropdown_Right); break;
-						case 2: tBind.Info = std::min(tBind.Info, 2); FDropdown("Weapon type", &tBind.Info, { "Hitscan", "Projectile", "Melee" }, {}, FDropdown_Right); break;
+						case BindEnum::Key: tBind.Info = std::clamp(tBind.Info, 0, 2); FDropdown("Behavior", &tBind.Info, { "Hold", "Toggle", "Double click" }, {}, FDropdown_Right); break;
+						case BindEnum::Class: tBind.Info = std::clamp(tBind.Info, 0, 8); FDropdown("Class", &tBind.Info, { "Scout", "Soldier", "Pyro", "Demoman", "Heavy", "Engineer", "Medic", "Sniper", "Spy" }, {}, FDropdown_Right); break;
+						case BindEnum::WeaponType: tBind.Info = std::clamp(tBind.Info, 0, 2); FDropdown("Weapon type", &tBind.Info, { "Hitscan", "Projectile", "Melee" }, {}, FDropdown_Right); break;
+						case BindEnum::ItemSlot: tBind.Info = std::max(tBind.Info, 0); FDropdown("Item slot", &tBind.Info, { "1", "2", "3", "4", "5", "6", "7", "8", "9" }, {}, FDropdown_Right); break;
 						}
 					} EndChild();
 
@@ -1614,44 +1615,46 @@ void CMenu::MenuSettings()
 
 							y++;
 
-							std::string sType; std::string sBehavior;
+							std::string sType; std::string sInfo;
 							switch (_tBind.Type)
 							{
-							// key
-							case 0:
+							case BindEnum::Key:
 								switch (_tBind.Info)
 								{
-								case 0: { sType = "hold"; break; }
-								case 1: { sType = "toggle"; break; }
-								case 2: { sType = "double"; break; }
+								case BindEnum::KeyEnum::Hold: { sType = "hold"; break; }
+								case BindEnum::KeyEnum::Toggle: { sType = "toggle"; break; }
+								case BindEnum::KeyEnum::DoubleClick: { sType = "double"; break; }
 								}
-								sBehavior = VK2STR(_tBind.Key);
+								sInfo = VK2STR(_tBind.Key);
 								break;
-							// class
-							case 1:
+							case BindEnum::Class:
 								sType = "class";
 								switch (_tBind.Info)
 								{
-								case 0: { sBehavior = "scout"; break; }
-								case 1: { sBehavior = "soldier"; break; }
-								case 2: { sBehavior = "pyro"; break; }
-								case 3: { sBehavior = "demoman"; break; }
-								case 4: { sBehavior = "heavy"; break; }
-								case 5: { sBehavior = "engineer"; break; }
-								case 6: { sBehavior = "medic"; break; }
-								case 7: { sBehavior = "sniper"; break; }
-								case 8: { sBehavior = "spy"; break; }
+								case BindEnum::ClassEnum::Scout: { sInfo = "scout"; break; }
+								case BindEnum::ClassEnum::Soldier: { sInfo = "soldier"; break; }
+								case BindEnum::ClassEnum::Pyro: { sInfo = "pyro"; break; }
+								case BindEnum::ClassEnum::Demoman: { sInfo = "demoman"; break; }
+								case BindEnum::ClassEnum::Heavy: { sInfo = "heavy"; break; }
+								case BindEnum::ClassEnum::Engineer: { sInfo = "engineer"; break; }
+								case BindEnum::ClassEnum::Medic: { sInfo = "medic"; break; }
+								case BindEnum::ClassEnum::Sniper: { sInfo = "sniper"; break; }
+								case BindEnum::ClassEnum::Spy: { sInfo = "spy"; break; }
 								}
 								break;
-							// weapon type
-							case 2:
+							case BindEnum::WeaponType:
 								sType = "weapon";
 								switch (_tBind.Info)
 								{
-								case 0: { sBehavior = "hitscan"; break; }
-								case 1: { sBehavior = "projectile"; break; }
-								case 2: { sBehavior = "melee"; break; }
+								case BindEnum::WeaponTypeEnum::Hitscan: { sInfo = "hitscan"; break; }
+								case BindEnum::WeaponTypeEnum::Projectile: { sInfo = "projectile"; break; }
+								case BindEnum::WeaponTypeEnum::Melee: { sInfo = "melee"; break; }
 								}
+								break;
+							case BindEnum::ItemSlot:
+								sType = "slot";
+								sInfo = std::format("{}", _tBind.Info + 1);
+								break;
 							}
 							if (_tBind.Not)
 								sType = std::format("not {}", sType);
@@ -1674,7 +1677,7 @@ void CMenu::MenuSettings()
 							FText(sType.c_str());
 
 							SetCursorPos({ vOriginalPos.x + (flWidth - H::Draw.Scale(105)) * (2.f / 3), vOriginalPos.y + H::Draw.Scale(7) });
-							FText(sBehavior.c_str());
+							FText(sInfo.c_str());
 
 							// buttons
 							SetCursorPos({ vOriginalPos.x + flWidth - H::Draw.Scale(22), vOriginalPos.y + H::Draw.Scale(5) });
@@ -2432,7 +2435,6 @@ void CMenu::DrawBinds()
 	using namespace ImGui;
 
 	if (IsOpen ? false : !Vars::Menu::ShowBinds.Value || I::EngineVGui->IsGameUIVisible() || I::MatSystemSurface->IsCursorVisible() && !I::EngineClient->IsPlayingDemo())
-
 		return;
 
 	// Handle draggable window position
@@ -2442,12 +2444,12 @@ void CMenu::DrawBinds()
 		SetNextWindowPos({ float(info.x), float(info.y) }, ImGuiCond_Always);
 
 	// Container for binds data
-	std::vector<std::tuple<bool, const char*, std::string, std::string, std::string>> vBinds;
+	std::vector<std::tuple<bool, const char*, std::string, std::string, std::string, Bind_t&>> vBinds;
 
 	// Recursive function to collect binds
 	std::function<void(int)> getBinds = [&](int iParent)
 		{
-			for (auto it = F::Binds.vBinds.begin(); it != F::Binds.vBinds.end(); it++)
+			for (auto it = F::Binds.vBinds.begin(); it != F::Binds.vBinds.end(); ++it)
 			{
 				int iBind = std::distance(F::Binds.vBinds.begin(), it);
 				auto& tBind = *it;
@@ -2457,57 +2459,51 @@ void CMenu::DrawBinds()
 				if (tBind.Visible || IsOpen)
 				{
 					// Prepare bind information
-					std::string info;
-					std::string state;
-					std::string status = tBind.Active ? "On" : "Off";
+					std::string sInfo, sState, sStatus = tBind.Active ? "On" : "Off";
 
 					switch (tBind.Type)
 					{
-					case 0: // Key-based binds
+					case BindEnum::Key:
 						switch (tBind.Info)
 						{
-						case 0: { info = "Hold"; break; }
-						case 1: { info = "Toggle"; break; }
-						case 2: { info = "Double"; break; }
+						case BindEnum::KeyEnum::Hold: sInfo = "Hold"; break;
+						case BindEnum::KeyEnum::Toggle: sInfo = "Toggle"; break;
+						case BindEnum::KeyEnum::DoubleClick: sInfo = "Double"; break;
 						}
-						state = VK2STR(tBind.Key); // Convert key to string representation
+						sState = VK2STR(tBind.Key);
 						break;
-
-					case 1: // Class-based binds
-						info = "Class";
+					case BindEnum::Class:
+						sInfo = "Class";
 						switch (tBind.Info)
 						{
-						case 0: { state = "Scout"; break; }
-						case 1: { state = "Soldier"; break; }
-						case 2: { state = "Pyro"; break; }
-						case 3: { state = "Demoman"; break; }
-						case 4: { state = "Heavy"; break; }
-						case 5: { state = "Engineer"; break; }
-						case 6: { state = "Medic"; break; }
-						case 7: { state = "Sniper"; break; }
-						case 8: { state = "Spy"; break; }
+						case BindEnum::ClassEnum::Scout: sState = "Scout"; break;
+						case BindEnum::ClassEnum::Soldier: sState = "Soldier"; break;
+						case BindEnum::ClassEnum::Pyro: sState = "Pyro"; break;
+						case BindEnum::ClassEnum::Demoman: sState = "Demoman"; break;
+						case BindEnum::ClassEnum::Heavy: sState = "Heavy"; break;
+						case BindEnum::ClassEnum::Engineer: sState = "Engineer"; break;
+						case BindEnum::ClassEnum::Medic: sState = "Medic"; break;
+						case BindEnum::ClassEnum::Sniper: sState = "Sniper"; break;
+						case BindEnum::ClassEnum::Spy: sState = "Spy"; break;
 						}
 						break;
-
-					case 2: // Weapon-based binds
-						info = "Weapon";
+					case BindEnum::WeaponType:
+						sInfo = "Weapon";
 						switch (tBind.Info)
 						{
-						case 0: { state = "Hitscan"; break; }
-						case 1: { state = "Projectile"; break; }
-						case 2: { state = "Melee"; break; }
+						case BindEnum::WeaponTypeEnum::Hitscan: sState = "Hitscan"; break;
+						case BindEnum::WeaponTypeEnum::Projectile: sState = "Projectile"; break;
+						case BindEnum::WeaponTypeEnum::Melee: sState = "Melee"; break;
 						}
 						break;
 					}
 
 					if (tBind.Not)
-						info = std::format("Not {}", info);
+						sInfo = std::format("Not {}", sInfo);
 
-					// Add bind to the list
-					vBinds.push_back({ tBind.Active, tBind.Name.c_str(), info, state, status });
+					vBinds.push_back({ tBind.Active, tBind.Name.c_str(), sInfo, sState, sStatus, tBind });
 				}
 
-				// Handle nested binds
 				if (tBind.Active)
 					getBinds(iBind);
 			}
@@ -2527,7 +2523,7 @@ void CMenu::DrawBinds()
 	else
 	{
 		PushFont(F::Render.FontSmall);
-		for (auto& [_, sName, sInfo, sState, sStatus] : vBinds)
+		for (auto& [_, sName, sInfo, sState, sStatus, _bind] : vBinds)
 		{
 			flNameWidth = std::max(flNameWidth, FCalcTextSize(sName).x);
 			flInfoWidth = std::max(flInfoWidth, FCalcTextSize(sInfo.c_str()).x);
@@ -2541,8 +2537,9 @@ void CMenu::DrawBinds()
 		flStatusWidth += H::Draw.Scale(15);
 	}
 
-	// Set window dimensions
-	float flWidth = flInfoWidth + flNameWidth + flStateWidth + flStatusWidth + H::Draw.Scale(16); // Reduced right padding here
+	// Increase window width to accommodate option buttons
+	float flOptionsWidth = H::Draw.Scale(100);  // Adjusting extra space for buttons
+	float flWidth = flInfoWidth + flNameWidth + flStateWidth + flStatusWidth + flOptionsWidth;
 	float flHeight = H::Draw.Scale(18 * vBinds.size() + 40);
 
 	// Configure and render the window
@@ -2573,7 +2570,7 @@ void CMenu::DrawBinds()
 		// Render binds
 		PushFont(F::Render.FontSmall);
 		int i = 0;
-		for (auto& [bActive, sName, sInfo, sState, sStatus] : vBinds)
+		for (auto& [bActive, sName, sInfo, sState, sStatus, tBind] : vBinds)
 		{
 			float flPosX = 0;
 
@@ -2591,7 +2588,7 @@ void CMenu::DrawBinds()
 
 			// State (Column 3)
 			SetCursorPos({ flPosX += flNameWidth, H::Draw.Scale(34 + 18 * i) });
-			PushStyleColor(ImGuiCol_Text, bActive ? F::Render.Active.Value : F::Render.Inactive.Value); // Ensure inactive color is used when not active
+			PushStyleColor(ImGuiCol_Text, bActive ? F::Render.Active.Value : F::Render.Inactive.Value);
 			FText(sState.c_str());
 			PopStyleColor();
 
@@ -2600,6 +2597,47 @@ void CMenu::DrawBinds()
 			PushStyleColor(ImGuiCol_Text, bActive ? F::Render.Accent.Value : F::Render.Inactive.Value);
 			FText(sStatus.c_str());
 			PopStyleColor();
+
+			if (IsOpen)
+			{
+				// Option buttons (delete, not, visibility)
+				SetCursorPos({ flPosX + H::Draw.Scale(25), H::Draw.Scale(33 + 18 * i) });
+				bool bDelete = IconButton(ICON_MD_DELETE);
+
+				SetCursorPos({ flPosX + H::Draw.Scale(50), H::Draw.Scale(33 + 18 * i) });
+				bool bNot = IconButton(!tBind.Not ? ICON_MD_CODE : ICON_MD_CODE_OFF);
+
+				SetCursorPos({ flPosX + H::Draw.Scale(75), H::Draw.Scale(33 + 18 * i) });
+				bool bVisibility = IconButton(tBind.Visible ? ICON_MD_VISIBILITY : ICON_MD_VISIBILITY_OFF);
+
+				PushFont(F::Render.FontRegular);
+				PushStyleVar(ImGuiStyleVar_WindowPadding, { H::Draw.Scale(8), H::Draw.Scale(8) });
+
+				if (bDelete)
+					OpenPopup(std::format("Confirmation## DeleteCond{}", i).c_str());
+				if (BeginPopupModal(std::format("Confirmation## DeleteCond{}", i).c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysUseWindowPadding))
+				{
+					FText(std::format("Do you really want to delete '{}'{}?", tBind.Name, F::Binds.HasChildren(i) ? " and all of its children" : "").c_str());
+
+					SetCursorPosY(GetCursorPosY() - 8);
+					if (FButton("Yes", FButton_Left))
+					{
+						F::Binds.RemoveBind(i);
+						CloseCurrentPopup();
+					}
+					if (FButton("No", FButton_Right | FButton_SameLine))
+						CloseCurrentPopup();
+
+					EndPopup();
+				}
+				if (bNot)
+					tBind.Not = !tBind.Not;
+				if (bVisibility)
+					tBind.Visible = !tBind.Visible;
+
+				PopStyleVar();
+				PopFont();
+			}
 
 			i++;
 		}

@@ -170,7 +170,7 @@ namespace Vars
 			CVar(GroundNewWeight, 100.f, DEBUGVAR)
 			CVar(GroundOldWeight, 0.f, DEBUGVAR)
 
-			CVar(AirSamples, 33, DEBUGVAR)
+			CVar(AirSamples, 66, DEBUGVAR)
 			CVar(AirStraightFuzzyValue, 10.f, DEBUGVAR)
 			CVar(AirLowMinimumSamples, 8, DEBUGVAR)
 			CVar(AirHighMinimumSamples, 8, DEBUGVAR)
