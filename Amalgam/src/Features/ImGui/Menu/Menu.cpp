@@ -2537,8 +2537,8 @@ void CMenu::DrawBinds()
 		flStatusWidth += H::Draw.Scale(15);
 	}
 
-	// Increase window width to accommodate option buttons
-	float flOptionsWidth = H::Draw.Scale(100);  // Adjusting extra space for buttons
+	// Adjust window width dynamically based on whether the menu is open
+	float flOptionsWidth = IsOpen ? H::Draw.Scale(100) : H::Draw.Scale(10);
 	float flWidth = flInfoWidth + flNameWidth + flStateWidth + flStatusWidth + flOptionsWidth;
 	float flHeight = H::Draw.Scale(18 * vBinds.size() + 40);
 
@@ -2648,6 +2648,7 @@ void CMenu::DrawBinds()
 	PopStyleColor();
 	PopStyleVar();
 }
+
 
 /* Window for the camera feature */
 void CMenu::DrawCameraWindow()

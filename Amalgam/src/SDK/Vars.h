@@ -786,7 +786,7 @@ namespace Vars
 		CVar(IndicatorGood, Color_t(0, 255, 0, 255))
 		CVar(IndicatorMid, Color_t(255, 255, 0, 255))
 		CVar(IndicatorBad, Color_t(255, 0, 0, 255))
-		CVar(IndicatorMisc, Color_t(75, 175, 255, 255))
+		CVar(IndicatorMisc, Color_t(203, 255, 255, 255))
 		CVar(IndicatorTextGood, Color_t(150, 255, 150, 255))
 		CVar(IndicatorTextMid, Color_t(255, 200, 0, 255))
 		CVar(IndicatorTextBad, Color_t(255, 150, 150, 255))
