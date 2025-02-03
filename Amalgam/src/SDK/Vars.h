@@ -783,8 +783,8 @@ namespace Vars
 		CVar(NPC, Color_t(255, 255, 255, 255), VISUAL)
 		CVar(Halloween, Color_t(100, 0, 255, 255), VISUAL)
 
-		CVar(IndicatorGood, Color_t(0, 255, 100, 255))
-		CVar(IndicatorMid, Color_t(255, 200, 0, 255))
+		CVar(IndicatorGood, Color_t(0, 255, 0, 255))
+		CVar(IndicatorMid, Color_t(255, 255, 0, 255))
 		CVar(IndicatorBad, Color_t(255, 0, 0, 255))
 		CVar(IndicatorMisc, Color_t(75, 175, 255, 255))
 		CVar(IndicatorTextGood, Color_t(150, 255, 150, 255))
