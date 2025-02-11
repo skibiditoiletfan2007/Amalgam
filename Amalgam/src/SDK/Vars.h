@@ -539,7 +539,7 @@ namespace Vars
 		SUBNAMESPACE_END(Bullet)
 
 		SUBNAMESPACE_BEGIN(Simulation)
-			Enum(Style, Off, Line, Separators, Spaced, Arrows, Boxes);
+			Enum(Style, Off, Line, Separators, SeparatorsWIP, Spaced, Arrows, Boxes);
 			CVar(PlayerPath, 0, VISUAL)
 			CVar(ProjectilePath, 0, VISUAL)
 			CVar(TrajectoryPath, 0, VISUAL)

@@ -221,7 +221,7 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 				{
 					int iKDR = iKills / std::max(iDeaths, 1);
 					if (iKDR >= 10)
-						tCache.m_vText.push_back({ ESPTextEnum::Right, std::format("HIGH KD [{} / {}]", iKills, iDeaths), Vars::Colors::IndicatorTextMid.Value, Vars::Menu::Theme::Background.Value });
+						tCache.m_vText.push_back({ ESPTextEnum::Right, std::format("HIGH KD [{} / {}]", iKills, iDeaths), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 				}
 			}
 
@@ -237,7 +237,7 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 					bCrits = true, bMiniCrits = false;
 
 				if (bCrits)
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "CRITS", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "CRITS",Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
 				else if (bMiniCrits)
 					tCache.m_vText.push_back({ ESPTextEnum::Right, "MINI-CRITS", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
 
@@ -256,30 +256,30 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 					pPlayer->InCond(TF_COND_INVULNERABLE_HIDE_UNLESS_DAMAGED) ||
 					pPlayer->InCond(TF_COND_INVULNERABLE_USER_BUFF) ||
 					pPlayer->InCond(TF_COND_INVULNERABLE_CARD_EFFECT))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "UBER", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "UBER", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 				else if (pPlayer->InCond(TF_COND_PHASE))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "BONK", Vars::Colors::IndicatorTextMid.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "BONK", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 
 				/* vaccinator effects */
 				if (pPlayer->InCond(TF_COND_MEDIGUN_UBER_BULLET_RESIST) || pPlayer->InCond(TF_COND_BULLET_IMMUNE))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "BULLET+", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "BULLET+", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 				else if (pPlayer->InCond(TF_COND_MEDIGUN_SMALL_BULLET_RESIST))
 					tCache.m_vText.push_back({ ESPTextEnum::Right, "BULLET", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 				if (pPlayer->InCond(TF_COND_MEDIGUN_UBER_BLAST_RESIST) || pPlayer->InCond(TF_COND_BLAST_IMMUNE))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "BLAST+", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "BLAST+", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 				else if (pPlayer->InCond(TF_COND_MEDIGUN_SMALL_BLAST_RESIST))
 					tCache.m_vText.push_back({ ESPTextEnum::Right, "BLAST", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 				if (pPlayer->InCond(TF_COND_MEDIGUN_UBER_FIRE_RESIST) || pPlayer->InCond(TF_COND_FIRE_IMMUNE))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "FIRE+", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "FIRE+", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 				else if (pPlayer->InCond(TF_COND_MEDIGUN_SMALL_FIRE_RESIST))
 					tCache.m_vText.push_back({ ESPTextEnum::Right, "FIRE", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 
 				if (pPlayer->InCond(TF_COND_OFFENSEBUFF))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "BANNER", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "BANNER", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 				if (pPlayer->InCond(TF_COND_DEFENSEBUFF))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "BATTALIONS", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "BATTALIONS", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 				if (pPlayer->InCond(TF_COND_REGENONDAMAGEBUFF))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "CONCH", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "CONCH", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 
 				//if (pPlayer->InCond(TF_COND_BLASTJUMPING))
 				//	tCache.m_vText.push_back({ ESPTextEnum::Right, "Blastjump", Vars::Colors::IndicatorTextMid.Value, Vars::Menu::Theme::Background.Value });

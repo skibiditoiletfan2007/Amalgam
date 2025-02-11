@@ -8,6 +8,7 @@
 #include "Fonts/Roboto/RobotoMedium.h"
 #include "Fonts/Roboto/RobotoBlack.h"
 #include "Menu/Menu.h"
+#include "../Visuals/Visuals.h"
 
 void CRender::Render(IDirect3DDevice9* pDevice)
 {
@@ -37,6 +38,7 @@ void CRender::Render(IDirect3DDevice9* pDevice)
 	ImGui_ImplWin32_NewFrame();
 	NewFrame();
 
+	F::Visuals.DrawTickbaseBars( );
 	F::Menu.Render();
 
 	EndFrame();

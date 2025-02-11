@@ -57,6 +57,8 @@ public:
 	void RestoreWorldModulation();
 
 	void CreateMove(CTFPlayer* pLocal, CTFWeaponBase* pWeapon);
+
+	void DrawTickbaseBars( );
 };
 
 ADD_FEATURE(CVisuals, Visuals)

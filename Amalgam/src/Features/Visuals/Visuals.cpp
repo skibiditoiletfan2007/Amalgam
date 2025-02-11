@@ -11,6 +11,7 @@
 #include "Materials/Materials.h"
 #include "../Spectate/Spectate.h"
 #include "../TickHandler/TickHandler.h"
+#include <ImGui/imgui.h>
 
 MAKE_SIGNATURE(RenderLine, "engine.dll", "48 89 5C 24 ? 48 89 74 24 ? 44 89 44 24", 0x0);
 MAKE_SIGNATURE(RenderBox, "engine.dll", "48 83 EC ? 8B 84 24 ? ? ? ? 4D 8B D8", 0x0);
@@ -76,7 +77,7 @@ void CVisuals::DrawTicks(CTFPlayer* pLocal)
 	}
 
 	// Draw the background of the progress bar
-	H::Draw.FillRoundRect(iPosX, iPosY, iSizeX, iSizeY, cornerRadius, Vars::Menu::Theme::Background.Value);
+	/*H::Draw.FillRoundRect( iPosX, iPosY, iSizeX, iSizeY, cornerRadius, Vars::Menu::Theme::Background.Value );
 
 	// Draw the progress bar based on ratio
 	if (flRatio > 0.0f)
@@ -87,6 +88,39 @@ void CVisuals::DrawTicks(CTFPlayer* pLocal)
 		int progressPosY = iPosY + H::Draw.Scale(2, Scale_Round);
 
 		H::Draw.FillRoundRect(progressPosX, progressPosY, progressSizeX * flRatio, progressSizeY, cornerRadius, Vars::Menu::Theme::Accent.Value);
+	}*/
+}
+
+void CVisuals::DrawTickbaseBars( )
+{
+	if ( !( Vars::Menu::Indicators.Value & Vars::Menu::IndicatorsEnum::Ticks ) || I::EngineVGui->IsGameUIVisible( ) )
+		return;
+
+	const auto pLocal = I::ClientEntityList->GetClientEntity( I::EngineClient->GetLocalPlayer( ) )->As<CTFPlayer>( );
+	if ( !pLocal || !pLocal->IsAlive( ) )
+		return;
+
+	int iChoke = std::max( I::ClientState->chokedcommands - ( F::AntiAim.YawOn( ) ? F::AntiAim.AntiAimTicks( ) : 0 ), 0 );
+	int iTicks = std::clamp( F::Ticks.m_iShiftedTicks + iChoke, 0, F::Ticks.m_iMaxShift );
+
+	const DragBox_t dtPos = Vars::Menu::TicksDisplay.Value;
+	const float ratioCurrent = ( float )iTicks / ( float )F::Ticks.m_iMaxShift;
+
+	auto& Theme = Vars::Menu::Theme::Background.Value;
+	float sizeX = 100, sizeY = 12;
+	ImGui::GetBackgroundDrawList( )->AddRectFilled(
+		ImVec2( dtPos.x - sizeX / 2, dtPos.y + 5 + 13 ), ImVec2( dtPos.x + sizeX / 2, dtPos.y + 5 + 13 + sizeY ),
+		ImColor( Theme.r, Theme.g, Theme.b, Theme.a ), 10
+	);
+	if ( iTicks && ratioCurrent )
+	{
+		sizeX = 96, sizeY = 8; float posY = dtPos.y + 5 + 13 + 2;
+		ImGui::GetBackgroundDrawList( )->PushClipRect( ImVec2( dtPos.x - sizeX / 2, posY ), ImVec2( dtPos.x - sizeX / 2 + sizeX * ratioCurrent + 1, posY + sizeY ), true );
+		ImGui::GetBackgroundDrawList( )->AddRectFilled(
+			ImVec2( dtPos.x - sizeX / 2, posY ), ImVec2( dtPos.x + sizeX / 2, posY + sizeY ),
+			ImColor( Vars::Menu::Theme::Accent.Value.r, Vars::Menu::Theme::Accent.Value.g, Vars::Menu::Theme::Accent.Value.b, Vars::Menu::Theme::Accent.Value.a ), 10
+		);
+		ImGui::GetBackgroundDrawList( )->PopClipRect( );
 	}
 }
 
@@ -632,6 +666,44 @@ void CVisuals::DrawPath(std::deque<Vec3>& Line, Color_t Color, int iStyle, bool 
 				RenderLine(vEnd, vEnd + vDir, Color, bZBuffer);
 			}
 			break;
+
+			RenderLine(Line[i - 1], Line[i], Color, bZBuffer);
+			break;
+		}
+		case Vars::Visuals::Simulation::StyleEnum::SeparatorsWIP:
+		{
+			RenderLine(Line[i - 1], Line[i], Color, bZBuffer);
+
+			if (!(i % Vars::Visuals::Simulation::SeparatorSpacing.Value))
+			{
+				Vec3& vStart = Line[i - 1];
+				Vec3& vEnd = Line[i];
+
+				// Calculate direction vectors for XY plane
+				Vec3 vPrevDir = Line[i - 1] - Line[i - 2];
+				Vec3 vCurrDir = vEnd - vStart;
+
+				// Ignore vertical (Z-axis) movement
+				vPrevDir.z = 0;
+				vCurrDir.z = 0;
+
+				// Normalize vectors to get direction only
+				vPrevDir.Normalize();
+				vCurrDir.Normalize();
+
+				// Calculate angle difference in XY plane
+				float angleChange = acosf(vPrevDir.Dot(vCurrDir));
+
+				// Draw the separator line only if the angle change is significant (e.g., a curve)
+				if (fabs(angleChange) > 0.02f)  // Adjust threshold as needed
+				{
+					Vec3 vDir = vCurrDir * Vars::Visuals::Simulation::SeparatorLength.Value;
+					vDir = Math::RotatePoint(vDir, {}, { 0, 90, 0 });
+					RenderLine(vEnd, vEnd + vDir, Color, bZBuffer);
+				}
+			}
+			break;
+	
 		}
 		case Vars::Visuals::Simulation::StyleEnum::Spaced:
 		{
