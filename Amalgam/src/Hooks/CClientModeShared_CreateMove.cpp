@@ -143,7 +143,7 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 
 		G::Attacking = SDK::IsAttacking(pLocal, pWeapon, pCmd);
 		G::PrimaryWeaponType = SDK::GetWeaponType(pWeapon, &G::SecondaryWeaponType);
-		G::CanHeadshot = pWeapon->CanHeadShot();
+		G::CanHeadshot = pWeapon->CanHeadShot() || pWeapon->AmbassadorCanHeadshot(TICKS_TO_TIME(pLocal->m_nTickBase()));
 	}
 
 	// Run Features
@@ -160,7 +160,7 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 	F::CritHack.Run(pLocal, pWeapon, pCmd);
 	F::NoSpread.Run(pLocal, pWeapon, pCmd);
 	F::Misc.RunPost(pLocal, pCmd, *pSendPacket);
-	F::Resolver.CreateMove();
+	F::Resolver.CreateMove(pLocal);
 	F::Visuals.CreateMove(pLocal, pWeapon);
 
 	{
@@ -184,7 +184,9 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 		if (*pSendPacket && pAnimState)
 		{
 			float flOldFrametime = I::GlobalVars->frametime;
+			float flOldCurtime = I::GlobalVars->curtime;
 			I::GlobalVars->frametime = TICK_INTERVAL;
+			I::GlobalVars->curtime = TICKS_TO_TIME(pLocal->m_nTickBase());
 			for (auto& vAngle : vAngles)
 			{
 				if (pLocal->IsTaunting() && pLocal->m_bAllowMoveDuringTaunt())
@@ -194,6 +196,7 @@ MAKE_HOOK(CClientModeShared_CreateMove, U::Memory.GetVFunc(I::ClientModeShared, 
 				pLocal->FrameAdvance(TICK_INTERVAL);
 			}
 			I::GlobalVars->frametime = flOldFrametime;
+			I::GlobalVars->curtime = flOldCurtime;
 			vAngles.clear();
 		}
 	}

@@ -313,7 +313,7 @@ void CCritHack::ResetWeapons(CTFPlayer* pLocal)
 
 	for (auto& [iSlot, _] : m_mStorage)
 	{
-		if (m_mStorage.contains(iSlot) && !mWeapons.contains(iSlot))
+		if (!mWeapons.contains(iSlot))
 			m_mStorage.erase(iSlot);
 	}
 }

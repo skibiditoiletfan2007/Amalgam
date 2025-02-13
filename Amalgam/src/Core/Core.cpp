@@ -18,6 +18,11 @@ void CCore::AppendFailText(const char* sMessage)
 
 void CCore::Load()
 {
+	if (m_bUnload = m_bFailed = !SDK::GetTeamFortressWindow())
+	{
+		AppendFailText("Game window not found");
+		return;
+	}
 	while (!U::Memory.FindSignature("client.dll", "48 8B 0D ? ? ? ? 48 8B 10 48 8B 19 48 8B C8 FF 92"))
 	{
 		Sleep(500);
@@ -29,7 +34,6 @@ void CCore::Load()
 	}
 	Sleep(500);
 
-	SDK::GetTeamFortressWindow();
 	if (m_bUnload = m_bFailed = !U::Signatures.Initialize() || !U::Interfaces.Initialize())
 		return;
 	if (m_bUnload = m_bFailed2 = !U::Hooks.Initialize() || !U::BytePatches.Initialize() || !H::Events.Initialize())
