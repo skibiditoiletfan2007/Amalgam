@@ -25,17 +25,20 @@ MAKE_HOOK(CBaseHudChatLine_InsertAndColorizeText, S::CBaseHudChatLine_InsertAndC
 				sMessage = sMessage.replace(std::max(iFind - 1, 0ui64), sName.length() + 1, std::format("\x3{}\x1", sReplace));
 			sName = sReplace;
 		}
-
 		if (Vars::Visuals::UI::ChatTags.Value && iType != 1)
 		{
 			std::string sTag, cColor;
+
 			if (clientIndex == I::EngineClient->GetLocalPlayer())
 			{
 				if (Vars::Visuals::UI::ChatTags.Value & Vars::Visuals::UI::ChatTagsEnum::Local)
 					sTag = "You", cColor = Vars::Colors::Local.Value.ToHexA();
 			}
 			else if (Vars::Visuals::UI::ChatTags.Value & Vars::Visuals::UI::ChatTagsEnum::Friends && H::Entities.IsFriend(clientIndex))
-				sTag = "Friend", cColor = F::PlayerUtils.m_vTags[F::PlayerUtils.TagToIndex(FRIEND_TAG)].Color.ToHexA();
+			{
+				sTag = "Friend";
+				cColor = Color_t{ 146, 255, 92, 255 }.ToHexA();
+			}
 			else if (Vars::Visuals::UI::ChatTags.Value & Vars::Visuals::UI::ChatTagsEnum::Party && H::Entities.InParty(clientIndex))
 				sTag = "Party", cColor = F::PlayerUtils.m_vTags[F::PlayerUtils.TagToIndex(PARTY_TAG)].Color.ToHexA();
 			else if (Vars::Visuals::UI::ChatTags.Value & Vars::Visuals::UI::ChatTagsEnum::Assigned)
