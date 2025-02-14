@@ -2572,19 +2572,15 @@ void CMenu::DrawBinds()
 	if (IsOpen ? false : !Vars::Menu::ShowBinds.Value || I::EngineVGui->IsGameUIVisible() || I::MatSystemSurface->IsCursorVisible() && !I::EngineClient->IsPlayingDemo())
 		return;
 
-	// Handle draggable window position
 	static DragBox_t old = { -2147483648, -2147483648 };
 	DragBox_t info = IsOpen ? FGet(Vars::Menu::BindsDisplay) : Vars::Menu::BindsDisplay.Value;
 	if (info != old)
 		SetNextWindowPos({ float(info.x), float(info.y) }, ImGuiCond_Always);
 
-	// Container for binds data
-	std::vector<std::tuple<bool, const char*, std::string, std::string, std::string, Bind_t&>> vBinds;
-
-	// Recursive function to collect binds
+	std::vector<std::tuple<bool, std::string, const char*, std::string, std::string, int, Bind_t&>> vBinds;
 	std::function<void(int)> getBinds = [&](int iParent)
 		{
-			for (auto it = F::Binds.vBinds.begin(); it != F::Binds.vBinds.end(); ++it)
+			for (auto it = F::Binds.vBinds.begin(); it != F::Binds.vBinds.end(); it++)
 			{
 				int iBind = std::distance(F::Binds.vBinds.begin(), it);
 				auto& tBind = *it;
@@ -2593,197 +2589,147 @@ void CMenu::DrawBinds()
 
 				if (tBind.Visible || IsOpen)
 				{
-					// Prepare bind information
-					std::string sInfo, sState, sStatus = tBind.Active ? "On" : "Off";
-
+					std::string sType, sInfo, sState;
 					switch (tBind.Type)
 					{
 					case BindEnum::Key:
 						switch (tBind.Info)
 						{
-						case BindEnum::KeyEnum::Hold: sInfo = "Hold"; break;
-						case BindEnum::KeyEnum::Toggle: sInfo = "Toggle"; break;
-						case BindEnum::KeyEnum::DoubleClick: sInfo = "Double"; break;
+						case BindEnum::KeyEnum::Hold: sType = "Hold"; break;
+						case BindEnum::KeyEnum::Toggle: sType = "Toggle"; break;
+						case BindEnum::KeyEnum::DoubleClick: sType = "Double"; break;
 						}
-						sState = VK2STR(tBind.Key);
+						sInfo = VK2STR(tBind.Key);
 						break;
 					case BindEnum::Class:
-						sInfo = "Class";
+						sType = "class";
 						switch (tBind.Info)
 						{
-						case BindEnum::ClassEnum::Scout: sState = "Scout"; break;
-						case BindEnum::ClassEnum::Soldier: sState = "Soldier"; break;
-						case BindEnum::ClassEnum::Pyro: sState = "Pyro"; break;
-						case BindEnum::ClassEnum::Demoman: sState = "Demoman"; break;
-						case BindEnum::ClassEnum::Heavy: sState = "Heavy"; break;
-						case BindEnum::ClassEnum::Engineer: sState = "Engineer"; break;
-						case BindEnum::ClassEnum::Medic: sState = "Medic"; break;
-						case BindEnum::ClassEnum::Sniper: sState = "Sniper"; break;
-						case BindEnum::ClassEnum::Spy: sState = "Spy"; break;
+						case BindEnum::ClassEnum::Scout: sInfo = "scout"; break;
+						case BindEnum::ClassEnum::Soldier: sInfo = "soldier"; break;
+						case BindEnum::ClassEnum::Pyro: sInfo = "pyro"; break;
+						case BindEnum::ClassEnum::Demoman: sInfo = "demoman"; break;
+						case BindEnum::ClassEnum::Heavy: sInfo = "heavy"; break;
+						case BindEnum::ClassEnum::Engineer: sInfo = "engineer"; break;
+						case BindEnum::ClassEnum::Medic: sInfo = "medic"; break;
+						case BindEnum::ClassEnum::Sniper: sInfo = "sniper"; break;
+						case BindEnum::ClassEnum::Spy: sInfo = "spy"; break;
 						}
 						break;
 					case BindEnum::WeaponType:
-						sInfo = "Weapon";
+						sType = "weapon";
 						switch (tBind.Info)
 						{
-						case BindEnum::WeaponTypeEnum::Hitscan: sState = "Hitscan"; break;
-						case BindEnum::WeaponTypeEnum::Projectile: sState = "Projectile"; break;
-						case BindEnum::WeaponTypeEnum::Melee: sState = "Melee"; break;
+						case BindEnum::WeaponTypeEnum::Hitscan: sInfo = "hitscan"; break;
+						case BindEnum::WeaponTypeEnum::Projectile: sInfo = "projectile"; break;
+						case BindEnum::WeaponTypeEnum::Melee: sInfo = "melee"; break;
 						}
+						break;
+					case BindEnum::ItemSlot:
+						sType = "slot";
+						sInfo = std::format("{}", tBind.Info + 1);
 						break;
 					}
 
 					if (tBind.Not)
-						sInfo = std::format("Not {}", sInfo);
+						sInfo = std::format("not {}", sInfo);
 
-					vBinds.push_back({ tBind.Active, tBind.Name.c_str(), sInfo, sState, sStatus, tBind });
+					sState = tBind.Active ? "On" : "Off";
+
+					vBinds.push_back({ tBind.Active, sType, tBind.Name.c_str(), sInfo, sState, iBind, tBind });
 				}
 
-				if (tBind.Active)
+				if (tBind.Active || IsOpen)
 					getBinds(iBind);
 			}
 		};
 	getBinds(DEFAULT_BIND);
 
-	// Calculate column widths for layout
-	float flNameWidth = 0, flInfoWidth = 0, flStateWidth = 0, flStatusWidth = 0;
-
-	if (vBinds.empty())
+	float flTypeWidth = 0, flNameWidth = 0, flInfoWidth = 0, flStateWidth = 0;
+	PushFont(F::Render.FontSmall);
+	for (auto& [_, sType, sName, sInfo, sState, iBind, tBind] : vBinds)
 	{
-		if (!IsOpen)
-			return;
-		else
-			flNameWidth = FCalcTextSize("Binds", F::Render.FontLarge).x + H::Draw.Scale(10);
+		flTypeWidth = std::max(flTypeWidth, FCalcTextSize(sType.c_str()).x);
+		flNameWidth = std::max(flNameWidth, FCalcTextSize(sName).x);
+		flInfoWidth = std::max(flInfoWidth, FCalcTextSize(sInfo.c_str()).x);
+		flStateWidth = std::max(flStateWidth, FCalcTextSize(sState.c_str()).x);
 	}
-	else
-	{
-		PushFont(F::Render.FontSmall);
-		for (auto& [_, sName, sInfo, sState, sStatus, _bind] : vBinds)
-		{
-			flNameWidth = std::max(flNameWidth, FCalcTextSize(sName).x);
-			flInfoWidth = std::max(flInfoWidth, FCalcTextSize(sInfo.c_str()).x);
-			flStateWidth = std::max(flStateWidth, FCalcTextSize(sState.c_str()).x);
-			flStatusWidth = std::max(flStatusWidth, FCalcTextSize(sStatus.c_str()).x);
-		}
-		PopFont();
-		flNameWidth += H::Draw.Scale(9);
-		flInfoWidth += H::Draw.Scale(9);
-		flStateWidth += H::Draw.Scale(9);
-		flStatusWidth += H::Draw.Scale(15);
-	}
+	PopFont();
 
-	// Adjust window width dynamically based on whether the menu is open
-	float flOptionsWidth = IsOpen ? H::Draw.Scale(100) : H::Draw.Scale(10);
-	float flWidth = flInfoWidth + flNameWidth + flStateWidth + flStatusWidth + flOptionsWidth;
+	flTypeWidth += H::Draw.Scale(9);
+	flNameWidth += H::Draw.Scale(9);
+	flInfoWidth += H::Draw.Scale(9);
+	flStateWidth += H::Draw.Scale(9);
+
+	// ? FIXED: Button width must be added ONLY when the menu is open
+	float flButtonWidth = IsOpen ? H::Draw.Scale(90) : H::Draw.Scale(15);
+	float flWidth = flTypeWidth + flNameWidth + flInfoWidth + flStateWidth + flButtonWidth;
 	float flHeight = H::Draw.Scale(18 * vBinds.size() + 40);
-
-	// Configure and render the window
 	SetNextWindowSize({ flWidth, flHeight });
+
 	PushStyleVar(ImGuiStyleVar_WindowMinSize, { H::Draw.Scale(40), H::Draw.Scale(40) });
 	PushStyleColor(ImGuiCol_WindowBg, F::Render.Background.Value);
 
 	if (Begin("Binds", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize))
 	{
-		// Save window position
-		ImVec2 vWindowPos = GetWindowPos();
-		info.x = vWindowPos.x;
-		info.y = vWindowPos.y;
-		old = info;
-
-		if (IsOpen)
-			FSet(Vars::Menu::BindsDisplay, info);
-
-		// Header
 		PushFont(F::Render.FontLarge);
 		SetCursorPos({ H::Draw.Scale(11), H::Draw.Scale(9) });
 		FText("Binds");
 		PopFont();
 
-		// Header underline
-		GetWindowDrawList()->AddRectFilled({ vWindowPos.x + H::Draw.Scale(8), vWindowPos.y + H::Draw.Scale(26) }, { vWindowPos.x + flWidth - H::Draw.Scale(8), vWindowPos.y + H::Draw.Scale(27) }, F::Render.Accent, H::Draw.Scale(3));
+		ImVec2 vWindowPos = GetWindowPos();
+		GetWindowDrawList()->AddRectFilled({ vWindowPos.x + H::Draw.Scale(8), vWindowPos.y + H::Draw.Scale(26) },
+			{ vWindowPos.x + flWidth - H::Draw.Scale(8), vWindowPos.y + H::Draw.Scale(27) },
+			ImGui::ColorConvertFloat4ToU32(F::Render.Accent.Value), H::Draw.Scale(3));
 
-		// Render binds
 		PushFont(F::Render.FontSmall);
 		int i = 0;
-		for (auto& [bActive, sName, sInfo, sState, sStatus, tBind] : vBinds)
+		for (auto& [bActive, sType, sName, sInfo, sState, iBind, tBind] : vBinds)
 		{
-			float flPosX = 0;
+			float flPosX = H::Draw.Scale(12);
 
-			// Info (Column 2)
-			SetCursorPos({ flPosX += H::Draw.Scale(15), H::Draw.Scale(34 + 18 * i) });
-			PushStyleColor(ImGuiCol_Text, bActive ? F::Render.Accent.Value : F::Render.Inactive.Value);
-			FText(sInfo.c_str());
+			ImU32 colFirstLast = ImGui::ColorConvertFloat4ToU32(bActive ? F::Render.Accent.Value : F::Render.Inactive.Value);
+			ImU32 colMiddle = ImGui::ColorConvertFloat4ToU32(bActive ? F::Render.Active.Value : F::Render.Inactive.Value);
+
+			SetCursorPos({ flPosX, H::Draw.Scale(34 + 18 * i) });
+			PushStyleColor(ImGuiCol_Text, colFirstLast);
+			FText(sType.c_str());
 			PopStyleColor();
 
-			// Name (Column 1)
-			SetCursorPos({ flPosX += flInfoWidth, H::Draw.Scale(34 + 18 * i) });
-			PushStyleColor(ImGuiCol_Text, bActive ? F::Render.Active.Value : F::Render.Inactive.Value);
+			SetCursorPos({ flPosX += flTypeWidth, H::Draw.Scale(34 + 18 * i) });
+			PushStyleColor(ImGuiCol_Text, colMiddle);
 			FText(sName);
 			PopStyleColor();
 
-			// State (Column 3)
 			SetCursorPos({ flPosX += flNameWidth, H::Draw.Scale(34 + 18 * i) });
-			PushStyleColor(ImGuiCol_Text, bActive ? F::Render.Active.Value : F::Render.Inactive.Value);
-			FText(sState.c_str());
+			PushStyleColor(ImGuiCol_Text, colMiddle);
+			FText(sInfo.c_str());
 			PopStyleColor();
 
-			// Status (Column 4)
-			SetCursorPos({ flPosX += flStateWidth, H::Draw.Scale(34 + 18 * i) });
-			PushStyleColor(ImGuiCol_Text, bActive ? F::Render.Accent.Value : F::Render.Inactive.Value);
-			FText(sStatus.c_str());
+			SetCursorPos({ flPosX += flInfoWidth, H::Draw.Scale(34 + 18 * i) });
+			PushStyleColor(ImGuiCol_Text, colFirstLast);
+			FText(sState.c_str());
 			PopStyleColor();
 
 			if (IsOpen)
 			{
-				// Option buttons (delete, not, visibility)
-				SetCursorPos({ flPosX + H::Draw.Scale(25), H::Draw.Scale(33 + 18 * i) });
-				bool bDelete = IconButton(ICON_MD_DELETE);
+				SetCursorPos({ flWidth - H::Draw.Scale(25), H::Draw.Scale(33 + 18 * i) });
+				if (IconButton(ICON_MD_DELETE)) F::Binds.RemoveBind(iBind);
 
-				SetCursorPos({ flPosX + H::Draw.Scale(50), H::Draw.Scale(33 + 18 * i) });
-				bool bNot = IconButton(!tBind.Not ? ICON_MD_CODE : ICON_MD_CODE_OFF);
+				SetCursorPos({ flWidth - H::Draw.Scale(50), H::Draw.Scale(33 + 18 * i) });
+				if (IconButton(!tBind.Not ? ICON_MD_CODE : ICON_MD_CODE_OFF)) tBind.Not = !tBind.Not;
 
-				SetCursorPos({ flPosX + H::Draw.Scale(75), H::Draw.Scale(33 + 18 * i) });
-				bool bVisibility = IconButton(tBind.Visible ? ICON_MD_VISIBILITY : ICON_MD_VISIBILITY_OFF);
-
-				PushFont(F::Render.FontRegular);
-				PushStyleVar(ImGuiStyleVar_WindowPadding, { H::Draw.Scale(8), H::Draw.Scale(8) });
-
-				if (bDelete)
-					OpenPopup(std::format("Confirmation## DeleteCond{}", i).c_str());
-				if (BeginPopupModal(std::format("Confirmation## DeleteCond{}", i).c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysUseWindowPadding))
-				{
-					FText(std::format("Do you really want to delete '{}'{}?", tBind.Name, F::Binds.HasChildren(i) ? " and all of its children" : "").c_str());
-
-					SetCursorPosY(GetCursorPosY() - 8);
-					if (FButton("Yes", FButton_Left))
-					{
-						F::Binds.RemoveBind(i);
-						CloseCurrentPopup();
-					}
-					if (FButton("No", FButton_Right | FButton_SameLine))
-						CloseCurrentPopup();
-
-					EndPopup();
-				}
-				if (bNot)
-					tBind.Not = !tBind.Not;
-				if (bVisibility)
-					tBind.Visible = !tBind.Visible;
-
-				PopStyleVar();
-				PopFont();
+				SetCursorPos({ flWidth - H::Draw.Scale(75), H::Draw.Scale(33 + 18 * i) });
+				if (IconButton(tBind.Visible ? ICON_MD_VISIBILITY : ICON_MD_VISIBILITY_OFF)) tBind.Visible = !tBind.Visible;
 			}
-
 			i++;
 		}
 		PopFont();
-
 		End();
 	}
 	PopStyleColor();
 	PopStyleVar();
 }
-
 
 /* Window for the camera feature */
 void CMenu::DrawCameraWindow()

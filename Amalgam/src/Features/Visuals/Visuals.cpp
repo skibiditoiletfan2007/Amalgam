@@ -684,10 +684,10 @@ void CVisuals::DrawPath(std::deque<Vec3>& Line, Color_t Color, int iStyle, bool 
 			}
 
 			int totalPoints = Line.size();
-			int sampleCount = std::max(6, totalPoints / 4);  // Ensure at least 6 samples for better accuracy
+			int sampleCount = std::max(7, static_cast<int>(totalPoints / 3.5));  // Convert float to int
 
-			// Analyze the first 25% of the path to determine if it is curving
-			if (!isDecisionMade && i < sampleCount)  // Still within the first 25% of the path
+			// Analyze the first 30% of the path to determine if it is curving
+			if (!isDecisionMade && i < sampleCount)  // Still within the first 30% of the path
 			{
 				float totalRotation = 0.0f;
 
@@ -705,7 +705,7 @@ void CVisuals::DrawPath(std::deque<Vec3>& Line, Color_t Color, int iStyle, bool 
 					vPrevDir.z = 0;
 					vCurrDir.z = 0;
 
-					if (vPrevDir.Length() < 0.005f || vCurrDir.Length() < 0.005f)
+					if (vPrevDir.Length() < 0.004f || vCurrDir.Length() < 0.004f)
 						continue;  // Skip if movement is too small
 
 					vPrevDir.Normalize();
@@ -719,12 +719,12 @@ void CVisuals::DrawPath(std::deque<Vec3>& Line, Color_t Color, int iStyle, bool 
 
 				float avgRotation = totalRotation / sampleCount;
 
-				// More sensitive threshold (detects more subtle curves)
-				float adaptiveThreshold = std::max(0.002f, 0.008f - (0.0004f * sampleCount));
+				// **More Sensitive Threshold (30% more sensitive)**
+				float adaptiveThreshold = std::max(0.0018f, 0.0055f - (0.0003f * sampleCount));
 
 				shouldDrawTicks = (avgRotation > adaptiveThreshold);
 
-				// **New Fix**: Apply tick lines immediately in the first 25% if curving is detected
+				// **New Fix**: Apply tick lines immediately in the first 30% if curving is detected
 				if (shouldDrawTicks)
 				{
 					Vec3& vStart = Line[i - 1];
@@ -739,7 +739,7 @@ void CVisuals::DrawPath(std::deque<Vec3>& Line, Color_t Color, int iStyle, bool 
 					vPrevDir.Normalize();
 					vCurrDir.Normalize();
 
-					// Draw tick lines immediately in the first 25% if a curve is detected
+					// Draw tick lines immediately in the first 30% if a curve is detected
 					Vec3 vDir = vCurrDir * Vars::Visuals::Simulation::SeparatorLength.Value;
 					vDir = Math::RotatePoint(vDir, {}, { 0, 90, 0 });
 					RenderLine(vEnd, vEnd + vDir, Color, bZBuffer);

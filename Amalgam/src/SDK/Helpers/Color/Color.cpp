@@ -35,7 +35,7 @@ Color_t CColor::GetEntityDrawColor(CTFPlayer* pLocal, CBaseEntity* pEntity, bool
 		}
 		else if (H::Entities.IsFriend(pPlayer->entindex()))
 		{
-			out = F::PlayerUtils.m_vTags[F::PlayerUtils.TagToIndex(FRIEND_TAG)].Color;
+			out = Color_t(146, 255, 92, 255); // Custom friend tag color
 			if (pType) *pType = 3;
 		}
 		else if (H::Entities.InParty(pPlayer->entindex()))
