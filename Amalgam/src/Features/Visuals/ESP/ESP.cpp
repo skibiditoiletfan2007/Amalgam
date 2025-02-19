@@ -78,7 +78,7 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 			if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Name)
 				tCache.m_vText.push_back({ ESPTextEnum::Top, F::PlayerUtils.GetPlayerName(iIndex, pi.name), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 
-			std::vector<PriorityLabel_t*> vTags = {};
+			std::vector<PriorityLabel_t> vTags = {};
 			if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Priority)
 			{
 				/*/if (auto pTag = F::PlayerUtils.GetSignificantTag(pi.friendsID, 1)) // 50 alpha as white outline tends to be more apparent
@@ -87,7 +87,7 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 
 				if (auto pTag = F::PlayerUtils.GetSignificantTag(pi.friendsID, 1))
 				{
-						vTags.push_back(pTag);
+					vTags.push_back(*pTag);
 				}
 			}
 
@@ -97,18 +97,19 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 				{
 					auto pTag = F::PlayerUtils.GetTag(iID);
 					if (pTag && pTag->Label)
-						vTags.push_back(pTag);
+						vTags.push_back(*pTag);
 				}
 				if (H::Entities.IsFriend(iIndex))
 				{
-					auto pTag = &F::PlayerUtils.m_vTags[F::PlayerUtils.TagToIndex(FRIEND_TAG)];
-					if (pTag->Label)
+					PriorityLabel_t pTag = F::PlayerUtils.m_vTags[F::PlayerUtils.TagToIndex(FRIEND_TAG)];
+					pTag.Color = Color_t(146, 255, 92, 255);
+						if (pTag.Label)
 						vTags.push_back(pTag);
 				}
 				if (H::Entities.InParty(iIndex))
 				{
-					auto pTag = &F::PlayerUtils.m_vTags[F::PlayerUtils.TagToIndex(PARTY_TAG)];
-					if (pTag->Label)
+					auto& pTag = F::PlayerUtils.m_vTags[F::PlayerUtils.TagToIndex(PARTY_TAG)];
+						if (pTag.Label)
 						vTags.push_back(pTag);
 				}
 
@@ -117,11 +118,11 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 						std::sort(vTags.begin(), vTags.end(), [&](const auto a, const auto b) -> bool
 					{
 
-							return a->Name < b->Name;
+								return a.Name < b.Name;
 						});
 
 					for (auto& pTag : vTags) // 50 alpha as white outline tends to be more apparent
-						tCache.m_vText.push_back({ ESPTextEnum::Right, pTag->Name, pTag->Color, H::Draw.IsColorDark(pTag->Color) ? Color_t(255, 255, 255, 50) : Color_t(0, 0, 0, 255) });
+						tCache.m_vText.push_back({ ESPTextEnum::Right, pTag.Name, pTag.Color, H::Draw.IsColorDark(pTag.Color) ? Color_t(255, 255, 255, 50) : Color_t(0, 0, 0, 255) });
 				}
 			}
 		}

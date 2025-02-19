@@ -203,8 +203,8 @@ void CMenu::MenuAimbot()
 				{
 					FDropdown("Predict", Vars::Aimbot::Projectile::StrafePrediction, { "Air strafing", "Ground strafing" }, {}, FDropdown_Multi | FDropdown_Left);
 					FDropdown("Splash", Vars::Aimbot::Projectile::SplashPrediction, { "Off", "Include", "Prefer", "Only" }, {}, FDropdown_Right);
-					FDropdown("Auto detonate", Vars::Aimbot::Projectile::AutoDetonate, { "Stickies", "Flares" }, {}, FDropdown_Multi | FDropdown_Left);
-					FDropdown("Auto airblast", Vars::Aimbot::Projectile::AutoAirblast, { "Off", "Legit", "Rage" }, {}, FDropdown_Right);
+					FDropdown("Auto detonate", Vars::Aimbot::Projectile::AutoDetonate, { "Stickies", "Flares", "##Divider", "Ignore self damage" }, {}, FDropdown_Multi | FDropdown_Left);
+					FDropdown("Auto airblast", Vars::Aimbot::Projectile::AutoAirblast, { "Enabled", "##Divider", "Redirect simple", "Redirect advanced", "##Divider", "Respect FOV"}, {}, FDropdown_Multi | FDropdown_Right); // todo: finish redirect advanced!!
 					FDropdown("Modifiers## Projectile", Vars::Aimbot::Projectile::Modifiers, { "Charge shot", "Cancel charge", "Bodyaim if lethal", "Use prime time", "Aim blast at feet" }, {}, FDropdown_Multi);
 					FSlider("Max simulation time", Vars::Aimbot::Projectile::PredictionTime, 0.1f, 10.f, 0.25f, "%gs", FSlider_Min | FSlider_Precision);
 					PushTransparent(!FGet(Vars::Aimbot::Projectile::StrafePrediction));
@@ -253,7 +253,7 @@ void CMenu::MenuAimbot()
 						FSlider("hull increase", Vars::Aimbot::Projectile::HullIncrease, 0.f, 3.f, 0.5f, "%g", FSlider_Right | FSlider_Min | FSlider_Precision);
 
 						FSlider("drag override", Vars::Aimbot::Projectile::DragOverride, 0.f, 1.f, 0.01f, "%g", FSlider_Left | FSlider_Min | FSlider_Precision);
-						FSlider("time override", Vars::Aimbot::Projectile::TimeOverride, 0.f, 1.f, 0.01f, "%g", FSlider_Right | FSlider_Min | FSlider_Precision);
+						FSlider("time override", Vars::Aimbot::Projectile::TimeOverride, 0.f, 2.f, 0.01f, "%g", FSlider_Right | FSlider_Min | FSlider_Precision);
 						FSlider("huntsman lerp", Vars::Aimbot::Projectile::HuntsmanLerp, 0.f, 100.f, 1.f, "%g%%", FSlider_Left | FSlider_Clamp | FSlider_Precision);
 						FSlider("huntsman lerp low", Vars::Aimbot::Projectile::HuntsmanLerpLow, 0.f, 100.f, 1.f, "%g%%", FSlider_Right | FSlider_Clamp | FSlider_Precision);
 						FSlider("huntsman add", Vars::Aimbot::Projectile::HuntsmanAdd, 0.f, 20.f, 1.f, "%g", FSlider_Left | FSlider_Clamp | FSlider_Precision);
@@ -379,8 +379,8 @@ void CMenu::MenuAimbot()
 						PopTransparent();
 						FSlider("Cycle yaw", Vars::AntiHack::Resolver::CycleYaw, -180.f, 180.f, 45.f, "%g", FSlider_Left | FSlider_Clamp | FSlider_Precision);
 						FSlider("Cycle pitch", Vars::AntiHack::Resolver::CyclePitch, -180.f, 180.f, 90.f, "%g", FSlider_Right | FSlider_Clamp);
-						FToggle("Cycle minwalk", Vars::AntiHack::Resolver::CycleMinwalk, FToggle_Left);
-						FToggle("Cycle view", Vars::AntiHack::Resolver::CycleView, FToggle_Right);
+						FToggle("Cycle view", Vars::AntiHack::Resolver::CycleView, FToggle_Left);
+						FToggle("Cycle minwalk", Vars::AntiHack::Resolver::CycleMinwalk, FToggle_Right);
 					PopTransparent();
 				} EndSection();
 				if (Section("Auto Peek"))
@@ -792,10 +792,12 @@ void CMenu::MenuVisuals()
 
 				/* Column 2 */
 				TableNextColumn();
-				if (Section("Bullet"))
+				if (Section("Line"))
 				{
-					FColorPicker("Bullet tracer color", Vars::Colors::Bullet);
-					FToggle("Bullet tracers", Vars::Visuals::Bullet::Enabled);
+					FColorPicker("Line tracer clipped", Vars::Colors::LineClipped);
+					FColorPicker("Line tracer", Vars::Colors::Line, 1);
+					FToggle("Line tracers", Vars::Visuals::Line::Enabled);
+					FSlider("Draw duration## Line", Vars::Visuals::Line::DrawDuration, 0.f, 10.f, 1.f, "%g", FSlider_Min | FSlider_Precision);
 				} EndSection();
 				if (Section("Simulation"))
 				{
@@ -813,6 +815,9 @@ void CMenu::MenuVisuals()
 					FToggle("Box", Vars::Visuals::Simulation::Box, FToggle_Right);
 					FToggle("Swing prediction lines", Vars::Visuals::Simulation::SwingLines, FToggle_Left);
 					FToggle("Projectile camera", Vars::Visuals::Simulation::ProjectileCamera, FToggle_Right);
+					PushTransparent(FGet(Vars::Visuals::Simulation::Timed));
+						FSlider("Draw duration## Simulation", Vars::Visuals::Simulation::DrawDuration, 0.f, 10.f, 1.f, "%g", FSlider_Min | FSlider_Precision);
+					PopTransparent();
 				} EndSection();
 				if (Vars::Debug::Info.Value)
 				{
@@ -850,15 +855,27 @@ void CMenu::MenuVisuals()
 				}
 				if (Section("Hitbox"))
 				{
-					FDropdown("Enabled", Vars::Visuals::Hitbox::Enabled, { "On shot", "On hit" }, {}, FDropdown_Multi, -80);
+					FDropdown("Bones enabled", Vars::Visuals::Hitbox::BonesEnabled, { "On shot", "On hit" }, {}, FDropdown_Multi, -110);
 					FColorPicker("Target edge color", Vars::Colors::TargetHitboxEdge, 0, FColorPicker_Dropdown | FColorPicker_Tooltip);
+					FColorPicker("Target edge color clipped", Vars::Colors::TargetHitboxEdgeClipped, 0, FColorPicker_Dropdown | FColorPicker_Tooltip);
+					SameLine(); DebugDummy({ H::Draw.Scale(2), 0 });
 					FColorPicker("Target face color", Vars::Colors::TargetHitboxFace, 0, FColorPicker_Dropdown | FColorPicker_Tooltip);
+					FColorPicker("Target face color clipped", Vars::Colors::TargetHitboxFaceClipped, 0, FColorPicker_Dropdown | FColorPicker_Tooltip);
 					SameLine(); DebugDummy({ H::Draw.Scale(2), 0 });
 					FColorPicker("Bone edge color", Vars::Colors::BoneHitboxEdge, 0, FColorPicker_Dropdown | FColorPicker_Tooltip);
-					FColorPicker("Bone face color", Vars::Colors::BoneHitboxFace, 0, FColorPicker_Dropdown | FColorPicker_Tooltip);
+					FColorPicker("Bone edge color clipped", Vars::Colors::BoneHitboxEdgeClipped, 0, FColorPicker_Dropdown | FColorPicker_Tooltip);
 					SameLine(); DebugDummy({ H::Draw.Scale(2), 0 });
+					FColorPicker("Bone face color", Vars::Colors::BoneHitboxFace, 0, FColorPicker_Dropdown | FColorPicker_Tooltip);
+					FColorPicker("Bone face color clipped", Vars::Colors::BoneHitboxFaceClipped, 0, FColorPicker_Dropdown | FColorPicker_Tooltip);
+
+					FDropdown("Bounds enabled", Vars::Visuals::Hitbox::BoundsEnabled, { "On shot", "On hit", "Aim point" }, {}, FDropdown_Multi, -50);
 					FColorPicker("Bound edge color", Vars::Colors::BoundHitboxEdge, 0, FColorPicker_Dropdown | FColorPicker_Tooltip);
+					FColorPicker("Bound edge color clipped", Vars::Colors::BoundHitboxEdgeClipped, 0, FColorPicker_Dropdown | FColorPicker_Tooltip);
+					SameLine(); DebugDummy({ H::Draw.Scale(2), 0 });
 					FColorPicker("Bound face color", Vars::Colors::BoundHitboxFace, 0, FColorPicker_Dropdown | FColorPicker_Tooltip);
+					FColorPicker("Bound face color clipped", Vars::Colors::BoundHitboxFaceClipped, 0, FColorPicker_Dropdown | FColorPicker_Tooltip);
+
+					FSlider("Draw duration## Hitbox", Vars::Visuals::Hitbox::DrawDuration, 0.f, 10.f, 1.f, "%g", FSlider_Min | FSlider_Precision);
 				} EndSection();
 				if (Section("Thirdperson"))
 				{

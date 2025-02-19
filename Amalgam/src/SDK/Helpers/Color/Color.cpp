@@ -38,11 +38,11 @@ Color_t CColor::GetEntityDrawColor(CTFPlayer* pLocal, CBaseEntity* pEntity, bool
 			out = F::PlayerUtils.m_vTags[F::PlayerUtils.TagToIndex(FRIEND_TAG)].Color;
 			if (pType) *pType = 3;
 		}
-		else if (H::Entities.InParty(pPlayer->entindex()))
+		/*else if (H::Entities.InParty(pPlayer->entindex()))
 		{
 			out = F::PlayerUtils.m_vTags[F::PlayerUtils.TagToIndex(PARTY_TAG)].Color;
 			if (pType) *pType = 4;
-		}
+		}*/
 		/*/else if (auto pTag = F::PlayerUtils.GetSignificantTag(pPlayer->entindex()))
 		{
 			out = pTag->Color;

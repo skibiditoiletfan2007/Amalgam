@@ -388,7 +388,9 @@ bool CMovementSimulation::Initialize(CBaseEntity* pEntity, PlayerStorage& player
 
 	auto pPlayer = pEntity->As<CTFPlayer>();
 	playerStorageOut.m_pPlayer = pPlayer;
-	playerStorageOut.m_pPlayer->SetCurrentCmd(&DummyCmd);
+
+	I::MoveHelper->SetHost(pPlayer);
+	pPlayer->SetCurrentCmd(&DummyCmd);
 
 	// store player restore data
 	Store(playerStorageOut);
@@ -458,9 +460,8 @@ bool CMovementSimulation::Initialize(CBaseEntity* pEntity, PlayerStorage& player
 	// really hope this doesn't work like shit
 	if (useHitchance && bCalculated && !pPlayer->m_vecVelocity().IsZero() && Vars::Aimbot::Projectile::Hitchance.Value)
 	{
-		const auto& vRecords = mRecords[playerStorageOut.m_pPlayer->entindex()];
+		const auto& vRecords = mRecords[pPlayer->entindex()];
 		const auto iSamples = vRecords.size();
-		float flMaxSpeed = SDK::MaxSpeed(pPlayer);
 
 		float flCurrentChance = 1.f, flAverageYaw = 0.f;
 		for (size_t i = 0; i < iSamples; i++)
@@ -478,8 +479,8 @@ bool CMovementSimulation::Initialize(CBaseEntity* pEntity, PlayerStorage& player
 			flYaw += flYaw < 0 ? 180.f : -180.f;
 			flYaw /= iTicks;
 			flAverageYaw += flYaw;
-			if (flMaxSpeed)
-				flYaw *= std::clamp(pRecord1.m_vVelocity.Length2D() / flMaxSpeed, 0.f, 1.f);
+			if (playerStorageOut.m_MoveData.m_flMaxSpeed)
+				flYaw *= std::clamp(pRecord1.m_vVelocity.Length2D() / playerStorageOut.m_MoveData.m_flMaxSpeed, 0.f, 1.f);
 
 			if ((i + 1) % iStrafeSamples == 0 || i == iSamples - 1)
 			{
@@ -589,7 +590,7 @@ static int GetYawDifference(std::deque<MoveData>& vRecords, size_t i, float* pYa
 
 	static int iChanges, iStart;
 	bool bStraight = fabsf(*pYaw) * pRecord1.m_vVelocity.Length2D() * iTicks <= flStraightFuzzyValue; // dumb way to get straight bool
-	bool bChanged = iLastSign != iCurSign;
+	bool bChanged = iLastSign && iCurSign && iLastSign != iCurSign;
 	if (!i)
 	{
 		iChanges = 0, iStart = TIME_TO_TICKS(flTime1);
@@ -623,13 +624,12 @@ void CMovementSimulation::GetAverageYaw(PlayerStorage& playerStorage, int iSampl
 	if (!flMaxWeight)
 		return;
 
-	float flMaxSpeed = SDK::MaxSpeed(pPlayer);
 	float flAverageYaw = 0.f, flAverageDelta = 0.f, flTotalWeight = 0.f;
 	int iTicks = 0, iSkips = 0, iDeltaChanges = 0;
 	for (; iTicks < iSamples; iTicks++)
 	{
 		float flYaw = 0.f;
-		int iResult = GetYawDifference(vRecords, iTicks, &flYaw, flStraightFuzzyValue, iMaxChanges, iMaxChangeTime, flMaxSpeed);
+		int iResult = GetYawDifference(vRecords, iTicks, &flYaw, flStraightFuzzyValue, iMaxChanges, iMaxChangeTime, playerStorage.m_MoveData.m_flMaxSpeed);
 		SDK::Output("GetYawDifference", std::format("{}: {}, {}", iTicks, flYaw, iResult).c_str(), { 50, 127, 75, 255 }, Vars::Debug::Logging.Value);
 		if (!iResult)
 			break;
@@ -794,6 +794,7 @@ void CMovementSimulation::Restore(PlayerStorage& playerStorage)
 	if (playerStorage.m_bInitFailed || !playerStorage.m_pPlayer)
 		return;
 
+	I::MoveHelper->SetHost(nullptr);
 	playerStorage.m_pPlayer->SetCurrentCmd(nullptr);
 
 	Reset(playerStorage);

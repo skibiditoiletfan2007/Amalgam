@@ -25,7 +25,7 @@ MAKE_HOOK(CHudCrosshair_GetDrawPosition, S::CHudCrosshair_GetDrawPosition(), voi
         Vec3 vScreen;
 
         // Check if there's a valid aim position
-        if (!G::AimPosition.IsZero() && SDK::W2S(G::AimPosition, vScreen))
+        if (!G::AimPosition.first.IsZero() && SDK::W2S(G::AimPosition.first, vScreen))
         {
             if (pX) *pX = vScreen.x;
             if (pY) *pY = vScreen.y;
@@ -40,6 +40,7 @@ MAKE_HOOK(CHudCrosshair_GetDrawPosition, S::CHudCrosshair_GetDrawPosition(), voi
         const Vec3 viewangles = I::EngineClient->GetViewAngles();
         Vec3 vForward;
         Math::AngleVectors(viewangles, &vForward);
+
 
         const Vec3 vStartPos = pLocal->GetEyePosition();
         const Vec3 vEndPos = vStartPos + vForward * 8192;
