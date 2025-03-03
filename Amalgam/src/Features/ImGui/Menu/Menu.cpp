@@ -12,6 +12,8 @@
 #include "../../Records/Records.h"
 #include "../../Spectate/Spectate.h"
 
+
+
 /* The main menu */
 void CMenu::DrawMenu()
 {
@@ -476,15 +478,21 @@ void CMenu::MenuVisuals()
 					{
 						FColorPicker("Enemy color", Vars::Colors::Enemy, 0, FColorPicker_Left);
 						FColorPicker("Team color", Vars::Colors::Team, 0, FColorPicker_Middle | FColorPicker_SameLine);
+					  //FColorPicker("Enemy name color", Vars::Colors::EnemyName, 0, FColorPicker_Left);
+					  //FColorPicker("Team name color", Vars::Colors::TeamName, 0, FColorPicker_Middle | FColorPicker_SameLine);
 					}
 					else
 					{
 						FColorPicker("RED color", Vars::Colors::TeamRed, 0, FColorPicker_Left);
 						FColorPicker("BLU color", Vars::Colors::TeamBlu, 0, FColorPicker_Middle | FColorPicker_SameLine);
+					  //FColorPicker("RED name color", Vars::Colors::TeamRedName, 0, FColorPicker_Left);
+					  //FColorPicker("BLU name color", Vars::Colors::TeamBluName, 0, FColorPicker_Middle | FColorPicker_SameLine);
 					}
 
 					FColorPicker("Local color", Vars::Colors::Local, 0, FColorPicker_Left);
 					FColorPicker("Target color", Vars::Colors::Target, 0, FColorPicker_Middle | FColorPicker_SameLine);
+				  //FColorPicker("Local name color", Vars::Colors::LocalName, 0, FColorPicker_Left);
+				  //FColorPicker("Target color", Vars::Colors::TargetName, 0, FColorPicker_Middle | FColorPicker_SameLine);
 
 					FColorPicker("Healthpack color", Vars::Colors::Health, 0, FColorPicker_Left);
 					FColorPicker("Ammopack color", Vars::Colors::Ammo, 0, FColorPicker_Middle | FColorPicker_SameLine);
@@ -804,10 +812,10 @@ void CMenu::MenuVisuals()
 				} EndSection();
 				if (Section("Simulation"))
 				{
-					FDropdown("Player path", Vars::Visuals::Simulation::PlayerPath, { "Off", "Line", "Separators", "SeparatorsWIP", "Spaced", "Arrows", "Boxes" }, {}, FDropdown_Left, -20);
+					FDropdown("Player path", Vars::Visuals::Simulation::PlayerPath, { "Off", "Line", "Separators" ,"GreenBox", "Spaced", "Arrows", "Boxes" }, {}, FDropdown_Left, -20);
 					FColorPicker("Player path", Vars::Colors::PlayerPath, 0, FColorPicker_Dropdown | FColorPicker_Tooltip, nullptr, "Player path color");
 					FColorPicker("Player path clipped", Vars::Colors::PlayerPathClipped, 0, FColorPicker_Dropdown | FColorPicker_Tooltip, nullptr, "Player path clipped color");
-					FDropdown("Projectile path", Vars::Visuals::Simulation::ProjectilePath, { "Off", "Line", "Separators", "Spaced", "Arrows", "Boxes" }, {}, FDropdown_Right, -20);
+					FDropdown("Projectile path", Vars::Visuals::Simulation::ProjectilePath, { "Off", "Line", "Separators", "GreenBox", "Spaced", "Arrows", "Boxes" }, {}, FDropdown_Right, -20);
 					FColorPicker("Projectile path", Vars::Colors::ProjectilePath, 0, FColorPicker_Dropdown | FColorPicker_Tooltip, nullptr, "Projectile path color");
 					FColorPicker("Projectile path clipped", Vars::Colors::ProjectilePathClipped, 0, FColorPicker_Dropdown | FColorPicker_Tooltip, nullptr, "Projectile path clipped color");
 					FDropdown("Trajectory path", Vars::Visuals::Simulation::TrajectoryPath, { "Off", "Line", "Separators", "Spaced", "Arrows", "Boxes" }, {}, FDropdown_Left, -20);

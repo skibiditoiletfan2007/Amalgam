@@ -677,7 +677,24 @@ void CVisuals::DrawPath(std::deque<Vec3>& Line, Color_t Color, int iStyle, bool 
 			RenderLine(Line[i - 1], Line[i], Color, bZBuffer);
 			break;
 		}
-		case Vars::Visuals::Simulation::StyleEnum::SeparatorsWIP:
+
+		case Vars::Visuals::Simulation::StyleEnum::GreenBox:
+		{
+			// Draw the lines connecting the points
+			RenderLine(Line[i - 1], Line[i], Color, bZBuffer);
+
+			// Check if this is the last point in the path
+			if (i == Line.size() - 1)
+			{
+				// Define the color as 100% green (RGBA format: R=0, G=255, B=0, A=255)
+				Color_t greenColor = { 0, 255, 0, 255 };
+
+				// Render the box at the last point
+				RenderBox(Line[i], { -2, -2, -2 }, { 2, 2, 2 }, {}, greenColor, { 0, 0, 0, 0 }, bZBuffer);
+			}
+			break;
+		}
+		/*case Vars::Visuals::Simulation::StyleEnum::SeparatorsWIP:
 		{
 			RenderLine(Line[i - 1], Line[i], Color, bZBuffer);
 
@@ -778,7 +795,7 @@ void CVisuals::DrawPath(std::deque<Vec3>& Line, Color_t Color, int iStyle, bool 
 				}
 			}
 			break;
-		}
+		}*/
 
 		case Vars::Visuals::Simulation::StyleEnum::Spaced:
 		{
@@ -809,9 +826,15 @@ void CVisuals::DrawPath(std::deque<Vec3>& Line, Color_t Color, int iStyle, bool 
 		}
 		case Vars::Visuals::Simulation::StyleEnum::Boxes:
 		{
-			RenderLine(Line[i - 1], Line[i], Color, bZBuffer);
+			// Draw the lines connecting the points with Z-buffering DISABLED (unchanged behavior)
+			RenderLine(Line[i - 1], Line[i], Color, false); // Z-buffering disabled for lines
+
+			// Check if this is the point where a box should be drawn
 			if (!(i % Vars::Visuals::Simulation::SeparatorSpacing.Value))
-				RenderBox(Line[i], { -1, -1, -1 }, { 1, 1, 1 }, {}, Color, { 0, 0, 0, 0 }, bZBuffer);
+			{
+				// Render the box with Z-buffering ENABLED (to hide behind walls)
+				RenderBox(Line[i], { -1.3, -1.3, -1.3 }, { 1.3, 1.3, 1.3 }, {}, Color, { 0, 0, 0, 0 }, true); // Z-buffering enabled for boxes
+			}
 			break;
 		}
 		}

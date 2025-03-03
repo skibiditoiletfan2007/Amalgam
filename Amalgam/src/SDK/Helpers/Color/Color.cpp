@@ -1,5 +1,4 @@
 #include "Color.h"
-
 #include "../../Vars.h"
 #include "../../../Features/Players/PlayerUtils.h"
 
@@ -13,6 +12,23 @@ Color_t CColor::GetTeamColor(int iLocalTeam, int iTargetTeam, bool bRelative)
 		{
 		case 2: return Vars::Colors::TeamRed.Value;
 		case 3: return Vars::Colors::TeamBlu.Value;
+		}
+	}
+
+	return { 255, 255, 255, 255 };
+}
+
+// Add this function
+Color_t CColor::GetTeamNameColor(int iLocalTeam, int iTargetTeam, bool bRelative)
+{
+	if (bRelative)
+		return iLocalTeam == iTargetTeam ? Vars::Colors::TeamName.Value : Vars::Colors::EnemyName.Value;
+	else
+	{
+		switch (iTargetTeam)
+		{
+		case 2: return Vars::Colors::TeamRedName.Value;
+		case 3: return Vars::Colors::TeamBluName.Value;
 		}
 	}
 

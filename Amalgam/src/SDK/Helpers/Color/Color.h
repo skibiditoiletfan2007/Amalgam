@@ -5,9 +5,12 @@
 class CColor
 {
 public:
-	Color_t GetTeamColor(int iLocalTeam, int iTargetTeam, bool bRelative);
-	Color_t GetEntityDrawColor(CTFPlayer* pLocal, CBaseEntity* pEntity, bool bRelative, int* pType = nullptr);
-	Color_t GetScoreboardColor(int iIndex);
+    Color_t GetTeamColor(int iLocalTeam, int iTargetTeam, bool bRelative);
+    Color_t GetEntityDrawColor(CTFPlayer* pLocal, CBaseEntity* pEntity, bool bRelative, int* pType = nullptr);
+    Color_t GetScoreboardColor(int iIndex);
+
+    // Add this line
+    Color_t GetTeamNameColor(int iLocalTeam, int iTargetTeam, bool bRelative);
 };
 
 ADD_FEATURE_CUSTOM(CColor, Color, H)

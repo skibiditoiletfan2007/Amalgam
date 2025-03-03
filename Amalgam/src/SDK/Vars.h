@@ -548,7 +548,7 @@ namespace Vars
 		SUBNAMESPACE_END(Line)
 
 		SUBNAMESPACE_BEGIN(Simulation)
-			Enum(Style, Off, Line, Separators, SeparatorsWIP, Spaced, Arrows, Boxes);
+			Enum(Style, Off, Line, Separators, GreenBox, Spaced, Arrows, Boxes);
 			CVar(PlayerPath, 0, VISUAL)
 			CVar(ProjectilePath, 0, VISUAL)
 			CVar(TrajectoryPath, 0, VISUAL)
@@ -785,11 +785,17 @@ namespace Vars
 		CVar(FOVCircle, Color_t(255, 255, 255, 100), VISUAL)
 		CVar(Relative, false, VISUAL)
 		CVar(TeamRed, Color_t(225, 60, 60, 255), VISUAL)
+		CVar(TeamRedName, Color_t(225, 60, 60, 255), VISUAL)
 		CVar(TeamBlu, Color_t(75, 175, 225, 255), VISUAL)
+		CVar(TeamBluName, Color_t(75, 175, 225, 255), VISUAL)
 		CVar(Enemy, Color_t(225, 60, 60, 255), VISUAL)
+		CVar(EnemyName, Color_t(225, 60, 60, 255), VISUAL)
 		CVar(Team, Color_t(75, 175, 225, 255), VISUAL)
+		CVar(TeamName, Color_t(75, 175, 225, 255), VISUAL)
 		CVar(Local, Color_t(255, 255, 255, 255), VISUAL)
+		CVar(LocalName, Color_t(255, 255, 255, 255), VISUAL)
 		CVar(Target, Color_t(255, 0, 0, 255), VISUAL)
+		CVar(TargetName, Color_t(255, 0, 0, 255), VISUAL)
 		CVar(Health, Color_t(0, 225, 75, 255), VISUAL)
 		CVar(Ammo, Color_t(127, 127, 127, 255), VISUAL)
 		CVar(Money, Color_t(0, 150, 75, 255), VISUAL)
