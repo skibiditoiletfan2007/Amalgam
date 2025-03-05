@@ -10,7 +10,7 @@ public:
     Color_t GetScoreboardColor(int iIndex);
 
     // Add this line
-    Color_t GetTeamNameColor(int iLocalTeam, int iTargetTeam, bool bRelative);
+    Color_t GetTeamNameColor( CTFPlayer* pLocal, CTFPlayer* pPlayer, bool bRelative);
 };
 
 ADD_FEATURE_CUSTOM(CColor, Color, H)

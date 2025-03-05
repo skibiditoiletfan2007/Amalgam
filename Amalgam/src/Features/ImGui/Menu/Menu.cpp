@@ -478,24 +478,27 @@ void CMenu::MenuVisuals()
 					{
 						FColorPicker("Enemy color", Vars::Colors::Enemy, 0, FColorPicker_Left);
 						FColorPicker("Team color", Vars::Colors::Team, 0, FColorPicker_Middle | FColorPicker_SameLine);
-					  //FColorPicker("Enemy name color", Vars::Colors::EnemyName, 0, FColorPicker_Left);
-					  //FColorPicker("Team name color", Vars::Colors::TeamName, 0, FColorPicker_Middle | FColorPicker_SameLine);
+						FColorPicker("Enemy name color", Vars::Colors::EnemyName, 0, FColorPicker_Left);
+						FColorPicker("Team name color", Vars::Colors::TeamName, 0, FColorPicker_Middle | FColorPicker_SameLine);
 					}
 					else
 					{
 						FColorPicker("RED color", Vars::Colors::TeamRed, 0, FColorPicker_Left);
 						FColorPicker("BLU color", Vars::Colors::TeamBlu, 0, FColorPicker_Middle | FColorPicker_SameLine);
-					  //FColorPicker("RED name color", Vars::Colors::TeamRedName, 0, FColorPicker_Left);
-					  //FColorPicker("BLU name color", Vars::Colors::TeamBluName, 0, FColorPicker_Middle | FColorPicker_SameLine);
+						FColorPicker("RED name color", Vars::Colors::TeamRedName, 0, FColorPicker_Left);
+						FColorPicker("BLU name color", Vars::Colors::TeamBluName, 0, FColorPicker_Middle | FColorPicker_SameLine);
 					}
 
-					FColorPicker("Local color", Vars::Colors::Local, 0, FColorPicker_Left);
-					FColorPicker("Target color", Vars::Colors::Target, 0, FColorPicker_Middle | FColorPicker_SameLine);
-				  //FColorPicker("Local name color", Vars::Colors::LocalName, 0, FColorPicker_Left);
-				  //FColorPicker("Target color", Vars::Colors::TargetName, 0, FColorPicker_Middle | FColorPicker_SameLine);
+					FColorPicker( "Friend color", Vars::Colors::Friend, 0, FColorPicker_Left );
+					FColorPicker( "Target color", Vars::Colors::Target, 0, FColorPicker_Middle | FColorPicker_SameLine );
+					FColorPicker( "Friend name color", Vars::Colors::FriendName, 0, FColorPicker_Left );
+					FColorPicker( "Target name color", Vars::Colors::TargetName, 0, FColorPicker_Middle | FColorPicker_SameLine );
 
-					FColorPicker("Healthpack color", Vars::Colors::Health, 0, FColorPicker_Left);
-					FColorPicker("Ammopack color", Vars::Colors::Ammo, 0, FColorPicker_Middle | FColorPicker_SameLine);
+					FColorPicker( "Local color", Vars::Colors::Local, 0, FColorPicker_Left );
+					FColorPicker( "Healthpack color", Vars::Colors::Health, 0, FColorPicker_Middle | FColorPicker_SameLine );
+					FColorPicker( "Local name color", Vars::Colors::LocalName, 0, FColorPicker_Left );
+					FColorPicker( "Ammopack color", Vars::Colors::Ammo, 0, FColorPicker_Middle | FColorPicker_SameLine );
+
 					FColorPicker("Money color", Vars::Colors::Money, 0, FColorPicker_Left);
 					FColorPicker("Powerup color", Vars::Colors::Powerup, 0, FColorPicker_Middle | FColorPicker_SameLine);
 					FColorPicker("NPC color", Vars::Colors::NPC, 0, FColorPicker_Left);

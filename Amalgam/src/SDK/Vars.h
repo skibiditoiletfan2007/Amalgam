@@ -796,6 +796,8 @@ namespace Vars
 		CVar(LocalName, Color_t(255, 255, 255, 255), VISUAL)
 		CVar(Target, Color_t(255, 0, 0, 255), VISUAL)
 		CVar(TargetName, Color_t(255, 0, 0, 255), VISUAL)
+		CVar( Friend, Color_t( 255, 0, 0, 255 ), VISUAL )
+		CVar( FriendName, Color_t( 255, 0, 0, 255 ), VISUAL )
 		CVar(Health, Color_t(0, 225, 75, 255), VISUAL)
 		CVar(Ammo, Color_t(127, 127, 127, 255), VISUAL)
 		CVar(Money, Color_t(0, 150, 75, 255), VISUAL)

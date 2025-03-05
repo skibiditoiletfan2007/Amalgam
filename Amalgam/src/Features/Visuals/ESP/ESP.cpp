@@ -62,7 +62,7 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 
 		PlayerCache& tCache = m_mPlayerCache[pEntity];
 		tCache.m_flAlpha = (pPlayer->IsDormant() ? Vars::ESP::DormantAlpha.Value : Vars::ESP::ActiveAlpha.Value) / 255.f;
-		tCache.m_tColor = H::Color.GetTeamColor(pLocal->m_iTeamNum(), pPlayer->m_iTeamNum(), Vars::Colors::Relative.Value);
+		tCache.m_tColor = H::Color.GetEntityDrawColor(pLocal, pPlayer, Vars::Colors::Relative.Value);
 		tCache.m_bBox = Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Box;
 		tCache.m_bBones = Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Bones;
 
@@ -76,7 +76,7 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 		if (I::EngineClient->GetPlayerInfo(iIndex, &pi))
 		{
 			if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Name)
-				tCache.m_vText.push_back({ ESPTextEnum::Top, F::PlayerUtils.GetPlayerName(iIndex, pi.name), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+				tCache.m_vText.push_back({ ESPTextEnum::Top, F::PlayerUtils.GetPlayerName(iIndex, pi.name), H::Color.GetTeamNameColor( pLocal, pPlayer, Vars::Colors::Relative.Value ), Vars::Menu::Theme::Background.Value } );
 
 			std::vector<PriorityLabel_t> vTags = {};
 			if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Priority)
@@ -455,7 +455,7 @@ void CESP::StoreBuildings(CTFPlayer* pLocal)
 
 		BuildingCache& tCache = m_mBuildingCache[pEntity];
 		tCache.m_flAlpha = Vars::ESP::ActiveAlpha.Value / 255.f;
-		tCache.m_tColor = H::Color.GetTeamColor(pLocal->m_iTeamNum(), (pOwner ? pOwner : pEntity)->m_iTeamNum(), Vars::Colors::Relative.Value);
+		tCache.m_tColor = H::Color.GetEntityDrawColor( pLocal, ( pOwner ? pOwner : pEntity ), Vars::Colors::Relative.Value );
 		tCache.m_bBox = Vars::ESP::Building.Value & Vars::ESP::BuildingEnum::Box;
 
 		if (Vars::ESP::Building.Value & Vars::ESP::BuildingEnum::Distance)
@@ -608,7 +608,7 @@ void CESP::StoreProjectiles(CTFPlayer* pLocal)
 
 		WorldCache& tCache = m_mWorldCache[pEntity];
 		tCache.m_flAlpha = Vars::ESP::ActiveAlpha.Value / 255.f;
-		tCache.m_tColor = H::Color.GetTeamColor(pLocal->m_iTeamNum(), (pOwner ? pOwner : pEntity)->m_iTeamNum(), Vars::Colors::Relative.Value);
+		tCache.m_tColor = H::Color.GetEntityDrawColor( pLocal, ( pOwner ? pOwner : pEntity ), Vars::Colors::Relative.Value );
 		tCache.m_bBox = Vars::ESP::Projectile.Value & Vars::ESP::ProjectileEnum::Box;
 
 		if (Vars::ESP::Projectile.Value & Vars::ESP::ProjectileEnum::Distance)
@@ -740,7 +740,7 @@ void CESP::StoreObjective(CTFPlayer* pLocal)
 
 		WorldCache& tCache = m_mWorldCache[pEntity];
 		tCache.m_flAlpha = Vars::ESP::ActiveAlpha.Value / 255.f;
-		tCache.m_tColor = H::Color.GetTeamColor(pLocal->m_iTeamNum(), pEntity->m_iTeamNum(), Vars::Colors::Relative.Value);
+		tCache.m_tColor = H::Color.GetEntityDrawColor(pLocal, pEntity, Vars::Colors::Relative.Value);
 		tCache.m_bBox = Vars::ESP::Objective.Value & Vars::ESP::ObjectiveEnum::Box;
 
 		if (Vars::ESP::Objective.Value & Vars::ESP::ObjectiveEnum::Distance)

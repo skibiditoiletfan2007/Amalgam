@@ -19,16 +19,34 @@ Color_t CColor::GetTeamColor(int iLocalTeam, int iTargetTeam, bool bRelative)
 }
 
 // Add this function
-Color_t CColor::GetTeamNameColor(int iLocalTeam, int iTargetTeam, bool bRelative)
+Color_t CColor::GetTeamNameColor( CTFPlayer* pLocal, CTFPlayer* pPlayer, bool bRelative)
 {
-	if (bRelative)
-		return iLocalTeam == iTargetTeam ? Vars::Colors::TeamName.Value : Vars::Colors::EnemyName.Value;
+	int iLocalTeam = pLocal->m_iTeamNum( );
+	int iTargetTeam = pPlayer->m_iTeamNum( );
+
+	if ( pPlayer == pLocal )
+	{
+		return Vars::Colors::LocalName.Value;
+	}
+	else if ( pPlayer->entindex( ) == G::Target.first )
+	{
+		return Vars::Colors::TargetName.Value;
+	}
+	else if ( pPlayer->IsFriend( ) )
+	{
+		return Vars::Colors::FriendName.Value;
+	}
 	else
 	{
-		switch (iTargetTeam)
+		if ( bRelative )
+			return iLocalTeam == iTargetTeam ? Vars::Colors::TeamName.Value : Vars::Colors::EnemyName.Value;
+		else
 		{
-		case 2: return Vars::Colors::TeamRedName.Value;
-		case 3: return Vars::Colors::TeamBluName.Value;
+			switch ( iTargetTeam )
+			{
+				case 2: return Vars::Colors::TeamRedName.Value;
+				case 3: return Vars::Colors::TeamBluName.Value;
+			}
 		}
 	}
 
@@ -51,7 +69,8 @@ Color_t CColor::GetEntityDrawColor(CTFPlayer* pLocal, CBaseEntity* pEntity, bool
 		}
 		else if (H::Entities.IsFriend(pPlayer->entindex()))
 		{
-			out = F::PlayerUtils.m_vTags[F::PlayerUtils.TagToIndex(FRIEND_TAG)].Color;
+			//out = F::PlayerUtils.m_vTags[F::PlayerUtils.TagToIndex(FRIEND_TAG)].Color;
+			out = Vars::Colors::Friend.Value;
 			if (pType) *pType = 3;
 		}
 		/*else if (H::Entities.InParty(pPlayer->entindex()))
