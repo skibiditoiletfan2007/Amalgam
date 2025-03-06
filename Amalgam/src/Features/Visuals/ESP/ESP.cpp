@@ -1036,6 +1036,40 @@ void CESP::DrawPlayers()
 			lOffset += H::Draw.Scale(6);
 		}
 
+		// UberBar
+		if (tCache.m_bUberBar)
+		{
+			const int uberBarHeight = 1; // 1 pixel high UberBar
+			const int backgroundExtension = 1; // 1 pixel extension on each side
+			const Color_t backgroundColor = { 0, 0, 0, 130 }; // Black background with 130 alpha
+
+			// Smoothly interpolate Uber value
+			float& prevUber = m_mPrevPlayerUber[pEntity->entindex()];
+			prevUber = std::lerp(prevUber, tCache.m_flUber, 0.1f); // Adjust interpolation speed (0.1f)
+
+			// Draw the black background for the UberBar
+			H::Draw.FillRect(
+				x - backgroundExtension, // X position extended by 1 pixel
+				y + h + H::Draw.Scale(4) - backgroundExtension, // Y position extended by 1 pixel
+				w + 2 * backgroundExtension, // Width extended by 2 pixels
+				uberBarHeight + 2 * backgroundExtension, // Height extended by 2 pixels
+				backgroundColor
+			);
+
+			// Draw the UberBar
+			H::Draw.FillRectPercent(
+				x, // X position
+				y + h + H::Draw.Scale(4), // Y position (adjusted for placement)
+				w, // Width
+				uberBarHeight, // Height (1 pixel)
+				prevUber, // Interpolated Uber percentage
+				Vars::Colors::IndicatorMisc.Value, // UberBar color
+				{ 0, 0, 0, 0 } // No outline
+			);
+
+			bOffset += H::Draw.Scale(6);
+		}
+
 		int iVerticalOffset = H::Draw.Scale(3, Scale_Floor) - 1;
 		for (auto& [iMode, sText, tColor, tOutline] : tCache.m_vText)
 		{
@@ -1062,6 +1096,10 @@ void CESP::DrawPlayers()
 				rOffset += nTallSide;
 				break;
 			}
+			case ESPTextEnum::Uber:
+				H::Draw.String(fFontSide, r, y + h, tColor, ALIGN_TOPLEFT, sText.c_str());
+				rOffset += nTallSide;
+				break;
 			}
 		}
 
