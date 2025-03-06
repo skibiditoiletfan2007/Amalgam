@@ -38,13 +38,12 @@ void CCore::Load()
 		return;
 	if (m_bUnload = m_bFailed2 = !U::Hooks.Initialize() || !U::BytePatches.Initialize() || !H::Events.Initialize())
 		return;
-	U::ConVars.Initialize();
 	F::Materials.LoadMaterials();
+	U::ConVars.Initialize();
 	F::Commands.Initialize();
+	F::Configs.LoadConfig(F::Configs.m_sCurrentConfig, false);
+	F::Configs.m_bConfigLoaded = true;
 
-
-	F::Configs.LoadConfig(F::Configs.sCurrentConfig, false);
-	F::Menu.ConfigLoaded = true;
 
 	SDK::Output("Amalgam", "Loaded", { 175, 150, 255, 255 }, true, false, false, true);
 }
@@ -72,7 +71,7 @@ void CCore::Unload()
 
 		ssFailStream << "\n\n\n\n";
 		std::ofstream file;
-		file.open(F::Configs.sConfigPath + "\\fail_log.txt", std::ios_base::app);
+		file.open(F::Configs.m_sConfigPath + "\\fail_log.txt", std::ios_base::app);
 		file << ssFailStream.str();
 		file.close();
 
@@ -84,7 +83,7 @@ void CCore::Unload()
 	U::BytePatches.Unload();
 	H::Events.Unload();
 
-	if (F::Menu.IsOpen)
+	if (F::Menu.m_bIsOpen)
 		I::MatSystemSurface->SetCursorAlwaysVisible(false);
 	F::Visuals.RestoreWorldModulation();
 	if (I::Input->CAM_IsThirdPerson())
@@ -113,7 +112,7 @@ void CCore::Unload()
 
 		ssFailStream << "\n\n\n\n";
 		std::ofstream file;
-		file.open(F::Configs.sConfigPath + "\\fail_log.txt", std::ios_base::app);
+		file.open(F::Configs.m_sConfigPath + "\\fail_log.txt", std::ios_base::app);
 		file << ssFailStream.str();
 		file.close();
 

@@ -1414,7 +1414,7 @@ namespace ImGui
 		PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, { H::Draw.Scale(4), 0 });
 		PushStyleColor(ImGuiCol_PopupBg, F::Render.Foreground.Value);
 		ImVec4 tempColor = ColorToVec(*tColor);
-		bool bReturn = ColorEdit4(std::format("##{}", sLabel).c_str(), &tempColor.x, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoBorder | ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_Round, vSize);
+		bool bReturn = ColorEdit4(std::format("##{}", sLabel).c_str(), &tempColor.x, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoBorder | ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_Round | ImGuiColorEditFlags_LargeAlphaGrid, vSize);
 		if (bReturn)
 			*tColor = VecToColor(tempColor);
 		PopStyleColor();
@@ -1584,7 +1584,7 @@ namespace ImGui
 
 		if (GetActiveID() == uId)
 		{
-			F::Menu.InKeybind = true;
+			F::Menu.m_bInKeybind = true;
 
 			//FButton("...", flags | FButton_NoUpper, sizeOffset);
 			FButton(std::format("{}: ...", sLabel).c_str(), iFlags | FButton_NoUpper, vSize, iSizeOffset);
@@ -1812,8 +1812,6 @@ namespace ImGui
 	}
 
 	// convar wrappers
-	bool OldDisabled, OldTransparent;
-
 	template <class T>
 	inline int GetBind(ConfigVar<T>& var, bool bForce = false)
 	{
@@ -1846,14 +1844,16 @@ namespace ImGui
 		return var.Map[iParent];
 	}
 
+	bool bPushedDisabled = false, bPushedTransparent = false;
+
 	template <class T>
 	inline T FGet(ConfigVar<T>& var, bool bDisable = false)
 	{
-		OldDisabled = Disabled, OldTransparent = Transparent;
-
 		int iBind = GetBind(var);
 		if (bDisable)
 		{
+			bPushedDisabled = false, bPushedTransparent = false;
+
 			if (CurrentBind == DEFAULT_BIND)
 			{
 				if (Vars::Menu::MenuShowsBinds.Value && var.Map[DEFAULT_BIND] != var.Value)
@@ -1865,14 +1865,18 @@ namespace ImGui
 
 						if (tVal == var.Value)
 						{
-							Disabled = true;
+							PushDisabled(true);
+							bPushedDisabled = true;
 							return tVal;
 						}
 					}
 				}
 			}
 			else
-				Transparent = CurrentBind != iBind && !(var.m_iFlags & (NOSAVE | NOBIND));
+			{
+				PushTransparent(CurrentBind != iBind && !(var.m_iFlags & (NOSAVE | NOBIND)));
+				bPushedTransparent = true;
+			}
 		}
 		return var.Map[iBind];
 	}
@@ -1899,7 +1903,10 @@ namespace ImGui
 			}
 		}
 
-		Disabled = OldDisabled, Transparent = OldTransparent;
+		if (bPushedDisabled)
+			PopDisabled();
+		if (bPushedTransparent)
+			PopTransparent();
 	}
 
 	template <class T>

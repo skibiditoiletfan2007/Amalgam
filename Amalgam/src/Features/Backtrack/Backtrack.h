@@ -41,6 +41,7 @@ class CBacktrack
 	void MakeRecords();
 	void CleanRecords();
 
+	std::unordered_map<CBaseEntity*, std::deque<TickRecord>> m_mRecords;
 	std::unordered_map<int, bool> m_mDidShoot;
 
 	std::deque<CIncomingSequence> m_dSequences;
@@ -53,7 +54,7 @@ class CBacktrack
 public:
 	float GetLerp();
 	float GetFake();
-	float GetReal(int iFlow = -1, bool bNoFake = true);
+	float GetReal(int iFlow = MAX_FLOWS, bool bNoFake = true);
 	int GetAnticipatedChoke(int iMethod = Vars::Aimbot::General::AimType.Value);
 
 	std::deque<TickRecord>* GetRecords(CBaseEntity* pEntity);
@@ -74,8 +75,6 @@ public:
 	float m_flFakeLatency = 0.f;
 	float m_flFakeInterp = 0.015f;
 	float m_flWishInterp = 0.015f;
-
-	std::unordered_map<CBaseEntity*, std::deque<TickRecord>> m_mRecords;
 };
 
 ADD_FEATURE(CBacktrack, Backtrack)

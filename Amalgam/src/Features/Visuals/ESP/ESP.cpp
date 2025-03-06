@@ -1,6 +1,7 @@
 #include "ESP.h"
 
 #include "../../Players/PlayerUtils.h"
+#include "../../Spectate/Spectate.h"
 #include "../../Simulation/MovementSimulation/MovementSimulation.h"
 
 MAKE_SIGNATURE(CTFPlayerSharedUtils_GetEconItemViewByLoadoutSlot, "client.dll", "48 89 6C 24 ? 56 41 54 41 55 41 56 41 57 48 83 EC", 0x0);
@@ -27,13 +28,23 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 	if (!(Vars::ESP::Draw.Value & Vars::ESP::DrawEnum::Players) || !Vars::ESP::Player.Value)
 		return;
 
+	auto pObserverTarget = pLocal->m_hObserverTarget().Get();
+	int iObserverMode = pLocal->m_iObserverMode();
+	if (F::Spectate.m_iTarget != -1)
+	{
+		pObserverTarget = F::Spectate.m_pTargetTarget;
+		iObserverMode = F::Spectate.m_iTargetMode;
+	}
+
 	auto pResource = H::Entities.GetPR();
 	for (auto pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_ALL))
 	{
 		auto pPlayer = pEntity->As<CTFPlayer>();
 		int iIndex = pPlayer->entindex();
 
-		if (pLocal->m_iObserverMode() == OBS_MODE_FIRSTPERSON ? pLocal->m_hObserverTarget().Get() == pPlayer : iIndex == I::EngineClient->GetLocalPlayer())
+		if ((iObserverMode == OBS_MODE_FIRSTPERSON || iObserverMode == OBS_MODE_THIRDPERSON)
+			? pObserverTarget == pPlayer
+			: iIndex == I::EngineClient->GetLocalPlayer())
 		{
 			if (!(Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Local) || !I::Input->CAM_IsThirdPerson())
 				continue;
@@ -81,7 +92,7 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 			std::vector<PriorityLabel_t> vTags = {};
 			if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Priority)
 			{
-				/*/if (auto pTag = F::PlayerUtils.GetSignificantTag(pi.friendsID, 1)) // 50 alpha as white outline tends to be more apparent
+				/*if (auto pTag = F::PlayerUtils.GetSignificantTag(pi.friendsID, 1)) // 50 alpha as white outline tends to be more apparent
 					tCache.m_vText.push_back({ TextTop, pTag->Name, pTag->Color, H::Draw.IsColorDark(pTag->Color) ? Color_t(255, 255, 255, 50) : Color_t(0, 0, 0, 255) });
 			}*/
 
@@ -102,7 +113,6 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 				if (H::Entities.IsFriend(iIndex))
 				{
 					PriorityLabel_t pTag = F::PlayerUtils.m_vTags[F::PlayerUtils.TagToIndex(FRIEND_TAG)];
-					pTag.Color = Color_t(146, 255, 92, 255);
 						if (pTag.Label)
 						vTags.push_back(pTag);
 				}
@@ -215,7 +225,7 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 			if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::LagCompensation && !pPlayer->IsDormant() && pPlayer != pLocal)
 			{
 				if (H::Entities.GetLagCompensation(pPlayer->entindex()))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "LAGCOMP", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "LAGCOMP", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 			}
 
 			if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Ping && pResource && pPlayer != pLocal)
@@ -225,7 +235,7 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 				{
 					int iPing = pResource->GetPing(pPlayer->entindex());
 					if (iPing && (iPing >= 200 || iPing <= 5))
-						tCache.m_vText.push_back({ ESPTextEnum::Right, std::format("{}MS", iPing), Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
+						tCache.m_vText.push_back({ ESPTextEnum::Right, std::format("{}MS", iPing), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 				}
 			}
 
@@ -252,9 +262,9 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 					bCrits = true, bMiniCrits = false;
 
 				if (bCrits)
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "CRITS",Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "CRITS",Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 				else if (bMiniCrits)
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "MINI-CRITS", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "MINI-CRITS", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 
 				if (pPlayer->InCond(TF_COND_RADIUSHEAL) ||
 					pPlayer->InCond(TF_COND_HEALTH_BUFF) ||
@@ -263,9 +273,9 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 					pPlayer->InCond(TF_COND_HALLOWEEN_QUICK_HEAL) ||
 					pPlayer->InCond(TF_COND_HALLOWEEN_HELL_HEAL) ||
 					pPlayer->InCond(TF_COND_KING_BUFFED))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "HP+", Color_t(146, 255, 92, 255), Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "HP+", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 				else if (pPlayer->InCond(TF_COND_HEALTH_OVERHEALED))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "HP", Color_t(146, 255, 92), Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "HP", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 
 				if (pPlayer->InCond(TF_COND_INVULNERABLE) ||
 					pPlayer->InCond(TF_COND_INVULNERABLE_HIDE_UNLESS_DAMAGED) ||
@@ -499,12 +509,12 @@ void CESP::StoreBuildings(CTFPlayer* pLocal)
 				tCache.m_vText.push_back({ ESPTextEnum::Right, std::format("{:.0f}%%", flConstructed * 100.f), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 
 			if (pBuilding->IsSentrygun() && pBuilding->As<CObjectSentrygun>()->m_bPlayerControlled())
-				tCache.m_vText.push_back({ ESPTextEnum::Right, "WRANGLED", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
+				tCache.m_vText.push_back({ ESPTextEnum::Right, "WRANGLED", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 
 			if (pBuilding->m_bHasSapper())
-				tCache.m_vText.push_back({ ESPTextEnum::Right, "SAPPED", Vars::Colors::IndicatorTextGood.Value, Vars::Menu::Theme::Background.Value });
+				tCache.m_vText.push_back({ ESPTextEnum::Right, "SAPPED", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 			else if (pBuilding->m_bDisabled())
-				tCache.m_vText.push_back({ ESPTextEnum::Right, "DISABLED", Vars::Colors::IndicatorTextGood.Value, Vars::Menu::Theme::Background.Value });
+				tCache.m_vText.push_back({ ESPTextEnum::Right, "DISABLED", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 
 			if (pBuilding->IsSentrygun() && !pBuilding->m_bBuilding())
 			{
@@ -910,13 +920,21 @@ void CESP::Draw()
 	DrawPlayers();
 }
 
+// Add these member variables to your class to store previous values
+std::unordered_map<int, float> m_mPrevPlayerHealth; // Stores previous health values for each player
+std::unordered_map<int, float> m_mPrevPlayerUber;   // Stores previous Uber values for each player
+
 void CESP::DrawPlayers()
 {
 	if (!(Vars::ESP::Draw.Value & Vars::ESP::DrawEnum::Players) || !Vars::ESP::Player.Value)
 		return;
 
-	const auto& fFont = H::Fonts.GetFont(FONT_ESP);
-	const int nTall = fFont.m_nTall + H::Draw.Scale(2);
+	const auto& fFont = H::Fonts.GetFont(FONT_ESP_NAME);
+	const int nTall = fFont.m_nTall;
+
+	const auto& fFontSide = H::Fonts.GetFont(FONT_ESP_FLAG);
+	const int nTallSide = fFontSide.m_nTall;
+
 	for (auto& [pEntity, tCache] : m_mPlayerCache)
 	{
 		float x, y, w, h;
@@ -928,7 +946,7 @@ void CESP::DrawPlayers()
 		int lOffset = 0, rOffset = 0, bOffset = 0, tOffset = 0;
 
 		I::MatSystemSurface->DrawSetAlphaMultiplier(tCache.m_flAlpha);
-		
+
 		if (tCache.m_bBox)
 			H::Draw.LineRectOutline(x, y, w, h, tCache.m_tColor, { 0, 0, 0, 255 });
 
@@ -955,34 +973,67 @@ void CESP::DrawPlayers()
 
 		if (tCache.m_bHealthBar)
 		{
-			if (tCache.m_flHealth > 1.f)
+			const int healthBarWidth = 1; // 1 pixel wide health bar
+			const int backgroundExtension = 1; // 1 pixel extension on each side
+			const Color_t backgroundColor = { 0, 0, 0, 130 }; // Black background with 130 alpha
+
+			// Smoothly interpolate health value
+			float& prevHealth = m_mPrevPlayerHealth[pEntity->entindex()];
+			prevHealth = std::lerp(prevHealth, tCache.m_flHealth, 0.1f); // Adjust interpolation speed (0.1f)
+
+			// Ensure prevHealth reaches exactly 1.0f when at full health
+			if (tCache.m_flHealth >= 1.0f)
+				prevHealth = 1.0f;
+
+			// Draw the black background
+			H::Draw.FillRect(
+				x - H::Draw.Scale(6) - backgroundExtension, // X position extended by 1 pixel
+				y - backgroundExtension, // Y position extended by 1 pixel
+				healthBarWidth + 2 * backgroundExtension, // Width extended by 2 pixels
+				h + 2 * backgroundExtension, // Height extended by 2 pixels
+				backgroundColor
+			);
+
+			if (prevHealth > 1.f)
 			{
 				// Overhealed: Cap the health bar at full height and keep "IndicatorGood" color
 				Color_t cColor = Vars::Colors::IndicatorGood.Value;
-				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, 1.f, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
+				H::Draw.FillRectPercent(
+					x - H::Draw.Scale(6), y,
+					healthBarWidth, h,
+					1.f, cColor,
+					{ 0, 0, 0, 0 }, // No outline
+					ALIGN_BOTTOM, true
+				);
 			}
-			else if (tCache.m_flHealth > 0.5f)
+			else if (prevHealth > 0.5f)
 			{
 				// Mid health range: Lerp between "IndicatorGood" and "IndicatorMid"
-				float midLerpFactor = (tCache.m_flHealth - 0.5f) * 2.f;  // Normalize to 0-1
+				float midLerpFactor = (prevHealth - 0.5f) * 2.f;  // Normalize to 0-1
 				Color_t cColor = Vars::Colors::IndicatorMid.Value.Lerp(Vars::Colors::IndicatorGood.Value, midLerpFactor);
-				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, tCache.m_flHealth, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
+				H::Draw.FillRectPercent(
+					x - H::Draw.Scale(6), y,
+					healthBarWidth, h,
+					prevHealth, cColor,
+					{ 0, 0, 0, 0 }, // No outline
+					ALIGN_BOTTOM, true
+				);
 			}
 			else
 			{
 				// Low health range: Lerp between "IndicatorMid" and "IndicatorBad"
-				float lowLerpFactor = tCache.m_flHealth * 2.f;  // Normalize to 0-1
+				float lowLerpFactor = prevHealth * 2.f;  // Normalize to 0-1
 				Color_t cColor = Vars::Colors::IndicatorBad.Value.Lerp(Vars::Colors::IndicatorMid.Value, lowLerpFactor);
-				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, tCache.m_flHealth, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
+				H::Draw.FillRectPercent(
+					x - H::Draw.Scale(6), y,
+					healthBarWidth, h,
+					prevHealth, cColor,
+					{ 0, 0, 0, 0 }, // No outline
+					ALIGN_BOTTOM, true
+				);
 			}
 
 			lOffset += H::Draw.Scale(6);
-		}
-
-		if (tCache.m_bUberBar)
-		{
-			H::Draw.FillRectPercent(x, y + h + H::Draw.Scale(4), w, H::Draw.Scale(2, Scale_Round), tCache.m_flUber, Vars::Colors::IndicatorMisc.Value);
-			bOffset += H::Draw.Scale(6);
 		}
 
 		int iVerticalOffset = H::Draw.Scale(3, Scale_Floor) - 1;
@@ -999,41 +1050,37 @@ void CESP::DrawPlayers()
 				bOffset += nTall;
 				break;
 			case ESPTextEnum::Right:
-				H::Draw.String(fFont, r, t + iVerticalOffset + rOffset, tColor, ALIGN_TOPLEFT, sText.c_str());
-				rOffset += nTall;
+				H::Draw.String(fFontSide, r, t + iVerticalOffset + rOffset, tColor, ALIGN_TOPLEFT, sText.c_str());
+				rOffset += nTallSide;
 				break;
 			case ESPTextEnum::Health:
-				H::Draw.String(fFont, l - lOffset, t + iVerticalOffset + h - h * std::min(tCache.m_flHealth, 1.f), tColor, ALIGN_TOPRIGHT, sText.c_str());
+			{
+				// Use the interpolated health value for positioning
+				float& prevHealth = m_mPrevPlayerHealth[pEntity->entindex()];
+				float clampedHealth = std::min(prevHealth, 1.0f); // Clamp health to 1.0f for positioning
+				H::Draw.String(fFontSide, l - lOffset, t + iVerticalOffset + h - h * clampedHealth, tColor, ALIGN_TOPRIGHT, sText.c_str());
+				rOffset += nTallSide;
 				break;
-			case ESPTextEnum::Uber:
-				H::Draw.String(fFont, r, y + h, tColor, ALIGN_TOPLEFT, sText.c_str());
 			}
-		}
-
-		if (tCache.m_iClassIcon)
-		{
-			int size = H::Draw.Scale(18, Scale_Round);
-			H::Draw.Texture(m, t - tOffset, size, size, tCache.m_iClassIcon - 1, ALIGN_BOTTOM);
-		}
-
-		if (tCache.m_pWeaponIcon)
-		{
-			float flW = tCache.m_pWeaponIcon->Width(), flH = tCache.m_pWeaponIcon->Height();
-			float flScale = H::Draw.Scale(std::min((w + 40) / 2.f, 80.f) / std::max(flW, flH * 2));
-			H::Draw.DrawHudTexture(m - flW / 2.f * flScale, b + bOffset, flScale, tCache.m_pWeaponIcon, Vars::Menu::Theme::Active.Value);
+			}
 		}
 	}
 
 	I::MatSystemSurface->DrawSetAlphaMultiplier(1.f);
 }
+// Add this member variable to your class to store previous health values for buildings
+std::unordered_map<int, float> m_mPrevBuildingHealth; // Stores previous health values for each building
 
 void CESP::DrawBuildings()
 {
 	if (!(Vars::ESP::Draw.Value & Vars::ESP::DrawEnum::Buildings) || !Vars::ESP::Building.Value)
 		return;
 
-	const auto& fFont = H::Fonts.GetFont(FONT_ESP);
-	const int nTall = fFont.m_nTall + H::Draw.Scale(2);
+	const auto& fFont = H::Fonts.GetFont(FONT_ESP_NAME);
+	const int nTall = fFont.m_nTall;
+
+	const auto& fFontSide = H::Fonts.GetFont(FONT_ESP_FLAG);
+	const int nTallSide = fFontSide.m_nTall;
 
 	for (auto& [pEntity, tCache] : m_mBuildingCache)
 	{
@@ -1052,25 +1099,64 @@ void CESP::DrawBuildings()
 
 		if (tCache.m_bHealthBar)
 		{
-			if (tCache.m_flHealth > 1.f)
+			const int healthBarWidth = 1; // 1 pixel wide health bar
+			const int backgroundExtension = 1; // 1 pixel extension on each side
+			const Color_t backgroundColor = { 0, 0, 0, 130 }; // Black background with 130 alpha
+
+			// Smoothly interpolate health value
+			float& prevHealth = m_mPrevBuildingHealth[pEntity->entindex()];
+			prevHealth = std::lerp(prevHealth, tCache.m_flHealth, 0.1f); // Adjust interpolation speed (0.1f)
+
+			// Ensure prevHealth reaches exactly 1.0f when at full health
+			if (tCache.m_flHealth >= 1.0f)
+				prevHealth = 1.0f;
+
+			// Draw the black background
+			H::Draw.FillRect(
+				x - H::Draw.Scale(6) - backgroundExtension, // X position extended by 1 pixel
+				y - backgroundExtension, // Y position extended by 1 pixel
+				healthBarWidth + 2 * backgroundExtension, // Width extended by 2 pixels
+				h + 2 * backgroundExtension, // Height extended by 2 pixels
+				backgroundColor
+			);
+
+			if (prevHealth > 1.f)
 			{
-				// Overhealed: Use full height and "IndicatorGood" color
+				// Overhealed: Cap the health bar at full height and keep "IndicatorGood" color
 				Color_t cColor = Vars::Colors::IndicatorGood.Value;
-				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, 1.f, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
+				H::Draw.FillRectPercent(
+					x - H::Draw.Scale(6), y,
+					healthBarWidth, h,
+					1.f, cColor,
+					{ 0, 0, 0, 0 }, // No outline
+					ALIGN_BOTTOM, true
+				);
 			}
-			else if (tCache.m_flHealth > 0.5f)
+			else if (prevHealth > 0.5f)
 			{
 				// Mid health range: Lerp between "IndicatorGood" and "IndicatorMid"
-				float midLerpFactor = (tCache.m_flHealth - 0.5f) * 2.f;  // Normalize to 0-1
+				float midLerpFactor = (prevHealth - 0.5f) * 2.f;  // Normalize to 0-1
 				Color_t cColor = Vars::Colors::IndicatorMid.Value.Lerp(Vars::Colors::IndicatorGood.Value, midLerpFactor);
-				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, tCache.m_flHealth, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
+				H::Draw.FillRectPercent(
+					x - H::Draw.Scale(6), y,
+					healthBarWidth, h,
+					prevHealth, cColor,
+					{ 0, 0, 0, 0 }, // No outline
+					ALIGN_BOTTOM, true
+				);
 			}
 			else
 			{
 				// Low health range: Lerp between "IndicatorMid" and "IndicatorBad"
-				float lowLerpFactor = tCache.m_flHealth * 2.f;  // Normalize to 0-1
+				float lowLerpFactor = prevHealth * 2.f;  // Normalize to 0-1
 				Color_t cColor = Vars::Colors::IndicatorBad.Value.Lerp(Vars::Colors::IndicatorMid.Value, lowLerpFactor);
-				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, tCache.m_flHealth, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
+				H::Draw.FillRectPercent(
+					x - H::Draw.Scale(6), y,
+					healthBarWidth, h,
+					prevHealth, cColor,
+					{ 0, 0, 0, 0 }, // No outline
+					ALIGN_BOTTOM, true
+				);
 			}
 
 			lOffset += H::Draw.Scale(6);
@@ -1090,12 +1176,18 @@ void CESP::DrawBuildings()
 				bOffset += nTall;
 				break;
 			case ESPTextEnum::Right:
-				H::Draw.String(fFont, r, t + iVerticalOffset + rOffset, tColor, ALIGN_TOPLEFT, sText.c_str());
-				rOffset += nTall;
+				H::Draw.String(fFontSide, r, t + iVerticalOffset + rOffset, tColor, ALIGN_TOPLEFT, sText.c_str());
+				rOffset += nTallSide;
 				break;
 			case ESPTextEnum::Health:
-				H::Draw.String(fFont, l - lOffset, t + iVerticalOffset + h - h * std::min(tCache.m_flHealth, 1.f), tColor, ALIGN_TOPRIGHT, sText.c_str());
+			{
+				// Use the interpolated health value for positioning
+				float& prevHealth = m_mPrevBuildingHealth[pEntity->entindex()];
+				float clampedHealth = std::min(prevHealth, 1.0f); // Clamp health to 1.0f for positioning
+				H::Draw.String(fFontSide, l - lOffset, t + iVerticalOffset + h - h * clampedHealth, tColor, ALIGN_TOPRIGHT, sText.c_str());
+				rOffset += nTallSide;
 				break;
+			}
 			}
 		}
 	}
@@ -1105,8 +1197,12 @@ void CESP::DrawBuildings()
 
 void CESP::DrawWorld()
 {
-	const auto& fFont = H::Fonts.GetFont(FONT_ESP);
-	const int nTall = fFont.m_nTall + H::Draw.Scale(2);
+	const auto& fFont = H::Fonts.GetFont(FONT_ESP_NAME);
+	const int nTall = fFont.m_nTall;
+
+	const auto& fFontSide = H::Fonts.GetFont(FONT_ESP_FLAG);
+	const int nTallSide = fFontSide.m_nTall;
+
 	for (auto& [pEntity, tCache] : m_mWorldCache)
 	{
 		float x, y, w, h;
@@ -1136,8 +1232,8 @@ void CESP::DrawWorld()
 				bOffset += nTall;
 				break;
 			case ESPTextEnum::Right:
-				H::Draw.String(fFont, r, t + iVerticalOffset + rOffset, tColor, ALIGN_TOPLEFT, sText.c_str());
-				rOffset += nTall;
+				H::Draw.String(fFontSide, r, t + iVerticalOffset + rOffset, tColor, ALIGN_TOPLEFT, sText.c_str());
+				rOffset += nTallSide;
 			}
 		}
 	}

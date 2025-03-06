@@ -1,6 +1,7 @@
 #include "Binds.h"
 
 #include "../ImGui/Menu/Menu.h"
+#include "../Configs/Configs.h"
 #include <functional>
 
 #define IsType(type) var->m_iType == typeid(type).hash_code()
@@ -13,8 +14,26 @@
 
 void CBinds::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 {
-	if (G::Unload)
+	if (G::Unload || !F::Configs.m_bConfigLoaded)
 		return;
+
+	for (int iKey = 0; iKey < 256; iKey++)
+	{
+		// don't delay inputs for binds
+		auto& tKey = m_mKeyStorage[iKey];
+
+		bool bOldIsDown = tKey.m_bIsDown;
+		bool bOldIsPressed = tKey.m_bIsPressed;
+		bool bOldIsDouble = tKey.m_bIsDouble;
+		bool bOldIsReleased = tKey.m_bIsReleased;
+
+		U::KeyHandler.StoreKey(iKey, &tKey);
+
+		tKey.m_bIsDown = tKey.m_bIsDown || bOldIsDown;
+		tKey.m_bIsPressed = tKey.m_bIsPressed || bOldIsPressed;
+		tKey.m_bIsDouble = tKey.m_bIsDouble || bOldIsDouble;
+		tKey.m_bIsReleased = tKey.m_bIsReleased || bOldIsReleased;
+	}
 
 	auto setVars = [](int iBind)
 		{
@@ -56,12 +75,12 @@ void CBinds::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 					bool bKey = false;
 					switch (tBind.Info)
 					{
-					case BindEnum::KeyEnum::Hold: bKey = U::KeyHandler.Down(tBind.Key, true, &tBind.Storage); break;
-					case BindEnum::KeyEnum::Toggle: bKey = U::KeyHandler.Pressed(tBind.Key, true, &tBind.Storage); break;
-					case BindEnum::KeyEnum::DoubleClick: bKey = U::KeyHandler.Double(tBind.Key, true, &tBind.Storage); break;
+					case BindEnum::KeyEnum::Hold: bKey = U::KeyHandler.Down(tBind.Key, false, &m_mKeyStorage[tBind.Key]); break;
+					case BindEnum::KeyEnum::Toggle: bKey = U::KeyHandler.Pressed(tBind.Key, false, &m_mKeyStorage[tBind.Key]); break;
+					case BindEnum::KeyEnum::DoubleClick: bKey = U::KeyHandler.Double(tBind.Key, false, &m_mKeyStorage[tBind.Key]); break;
 					}
 					const bool bShouldUse = !I::EngineVGui->IsGameUIVisible() && (!I::MatSystemSurface->IsCursorVisible() || I::EngineClient->IsPlayingDemo())
-											|| F::Menu.IsOpen && !ImGui::GetIO().WantTextInput && !F::Menu.InKeybind; // allow in menu
+											|| F::Menu.m_bIsOpen && !ImGui::GetIO().WantTextInput && !F::Menu.m_bInKeybind; // allow in menu
 					bKey = bShouldUse && bKey;
 
 					switch (tBind.Info)
@@ -121,6 +140,10 @@ void CBinds::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon)
 			}
 		};
 	getBinds(DEFAULT_BIND);
+
+	// clear inputs for binds
+	for (int iKey = 0; iKey < 256; iKey++)
+		U::KeyHandler.StoreKey(iKey, &m_mKeyStorage[iKey]);
 }
 
 

@@ -4,7 +4,9 @@
 
 void CFonts::Reload(float flDPI)
 {
-	m_mapFonts[FONT_ESP] = { "Roboto Mono", int(13.f * flDPI), FONTFLAG_OUTLINE, 0 };
+	m_mapFonts[FONT_ESP_NAME] = { "Roboto", int(14.f * flDPI), FONTFLAG_DROPSHADOW, 0 };
+	m_mapFonts[FONT_ESP_FLAG] = { "Roboto", int(11.f * flDPI), FONTFLAG_DROPSHADOW, 0 };
+
 	m_mapFonts[FONT_INDICATORS] = { "micross", int(13.f * flDPI), FONTFLAG_OUTLINE, 0 };
 
 	for (auto& [_, fFont] : m_mapFonts)
