@@ -1064,6 +1064,21 @@ void CESP::DrawPlayers()
 			}
 			}
 		}
+
+		// Draw player class icon
+		if (tCache.m_iClassIcon)
+		{
+			int size = H::Draw.Scale(18, Scale_Round);
+			H::Draw.Texture(m, t - tOffset, size, size, tCache.m_iClassIcon - 1, ALIGN_BOTTOM);
+		}
+
+		// Draw weapon icon
+		if (tCache.m_pWeaponIcon)
+		{
+			float flW = tCache.m_pWeaponIcon->Width(), flH = tCache.m_pWeaponIcon->Height();
+			float flScale = H::Draw.Scale(std::min((w + 40) / 2.f, 80.f) / std::max(flW, flH * 2));
+			H::Draw.DrawHudTexture(m - flW / 2.f * flScale, b + bOffset, flScale, tCache.m_pWeaponIcon, Vars::Menu::Theme::Active.Value);
+		}
 	}
 
 	I::MatSystemSurface->DrawSetAlphaMultiplier(1.f);
