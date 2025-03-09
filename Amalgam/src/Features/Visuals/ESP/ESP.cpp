@@ -87,7 +87,7 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 		if (I::EngineClient->GetPlayerInfo(iIndex, &pi))
 		{
 			if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Name)
-				tCache.m_vText.push_back({ ESPTextEnum::Top, F::PlayerUtils.GetPlayerName(iIndex, pi.name), H::Color.GetTeamNameColor( pLocal, pPlayer, Vars::Colors::Relative.Value ), Vars::Menu::Theme::Background.Value } );
+				tCache.m_vText.push_back({ ESPTextEnum::Top, F::PlayerUtils.GetPlayerName(iIndex, pi.name), H::Color.GetEntityNameColor( pLocal, pPlayer, Vars::Colors::Relative.Value ), Vars::Menu::Theme::Background.Value } );
 
 			std::vector<PriorityLabel_t> vTags = {};
 			if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Priority)
@@ -483,7 +483,7 @@ void CESP::StoreBuildings(CTFPlayer* pLocal)
 			case ETFClassID::CObjectDispenser: szName = "DISPENSER"; break;
 			case ETFClassID::CObjectTeleporter: szName = pBuilding->m_iObjectMode() ? "TELEPORTER EXIT" : "TELEPORTER ENTRANCE";
 			}
-			tCache.m_vText.push_back({ ESPTextEnum::Top, szName, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+			tCache.m_vText.push_back({ ESPTextEnum::Top, szName, H::Color.GetEntityNameColor( pLocal, ( pOwner ? pOwner : pEntity ), Vars::Colors::Relative.Value ), Vars::Menu::Theme::Background.Value } );
 		}
 
 		float flHealth = pBuilding->m_iHealth(), flMaxHealth = pBuilding->m_iMaxHealth();
@@ -674,7 +674,7 @@ void CESP::StoreProjectiles(CTFPlayer* pLocal)
 			case ETFClassID::CTFProjectile_EnergyRing: szName = "Energy"; break;
 				//case ETFClassID::CTFProjectile_Syringe: szName = "Syringe";
 			}
-			tCache.m_vText.push_back({ ESPTextEnum::Top, szName, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+			tCache.m_vText.push_back({ ESPTextEnum::Top, szName, H::Color.GetEntityNameColor( pLocal, ( pOwner ? pOwner : pEntity ), Vars::Colors::Relative.Value ), Vars::Menu::Theme::Background.Value });
 		}
 
 		if (Vars::ESP::Projectile.Value & Vars::ESP::ProjectileEnum::Flags)
@@ -766,7 +766,7 @@ void CESP::StoreObjective(CTFPlayer* pLocal)
 			auto pIntel = pEntity->As<CCaptureFlag>();
 
 			if (Vars::ESP::Objective.Value & Vars::ESP::ObjectiveEnum::Name)
-				tCache.m_vText.push_back({ ESPTextEnum::Top, "INTEL", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+				tCache.m_vText.push_back({ ESPTextEnum::Top, "INTEL", H::Color.GetEntityNameColor( pLocal, pEntity, Vars::Colors::Relative.Value ), Vars::Menu::Theme::Background.Value });
 
 			if (Vars::ESP::Objective.Value & Vars::ESP::ObjectiveEnum::Flags)
 			{
