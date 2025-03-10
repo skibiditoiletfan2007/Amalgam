@@ -1,7 +1,6 @@
 #include "ESP.h"
 
 #include "../../Players/PlayerUtils.h"
-#include "../../Spectate/Spectate.h"
 #include "../../Simulation/MovementSimulation/MovementSimulation.h"
 
 MAKE_SIGNATURE(CTFPlayerSharedUtils_GetEconItemViewByLoadoutSlot, "client.dll", "48 89 6C 24 ? 56 41 54 41 55 41 56 41 57 48 83 EC", 0x0);
@@ -28,23 +27,13 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 	if (!(Vars::ESP::Draw.Value & Vars::ESP::DrawEnum::Players) || !Vars::ESP::Player.Value)
 		return;
 
-	auto pObserverTarget = pLocal->m_hObserverTarget().Get();
-	int iObserverMode = pLocal->m_iObserverMode();
-	if (F::Spectate.m_iTarget != -1)
-	{
-		pObserverTarget = F::Spectate.m_pTargetTarget;
-		iObserverMode = F::Spectate.m_iTargetMode;
-	}
-
 	auto pResource = H::Entities.GetPR();
 	for (auto pEntity : H::Entities.GetGroup(EGroupType::PLAYERS_ALL))
 	{
 		auto pPlayer = pEntity->As<CTFPlayer>();
 		int iIndex = pPlayer->entindex();
 
-		if ((iObserverMode == OBS_MODE_FIRSTPERSON || iObserverMode == OBS_MODE_THIRDPERSON)
-			? pObserverTarget == pPlayer
-			: iIndex == I::EngineClient->GetLocalPlayer())
+		if (pLocal->m_iObserverMode() == OBS_MODE_FIRSTPERSON ? pLocal->m_hObserverTarget().Get() == pPlayer : iIndex == I::EngineClient->GetLocalPlayer())
 		{
 			if (!(Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Local) || !I::Input->CAM_IsThirdPerson())
 				continue;
@@ -73,7 +62,7 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 
 		PlayerCache& tCache = m_mPlayerCache[pEntity];
 		tCache.m_flAlpha = (pPlayer->IsDormant() ? Vars::ESP::DormantAlpha.Value : Vars::ESP::ActiveAlpha.Value) / 255.f;
-		tCache.m_tColor = H::Color.GetEntityDrawColor(pLocal, pPlayer, Vars::Colors::Relative.Value);
+		tCache.m_tColor = H::Color.GetTeamColor(pLocal->m_iTeamNum(), pPlayer->m_iTeamNum(), Vars::Colors::Relative.Value);
 		tCache.m_bBox = Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Box;
 		tCache.m_bBones = Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Bones;
 
@@ -87,12 +76,12 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 		if (I::EngineClient->GetPlayerInfo(iIndex, &pi))
 		{
 			if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Name)
-				tCache.m_vText.push_back({ ESPTextEnum::Top, F::PlayerUtils.GetPlayerName(iIndex, pi.name), H::Color.GetTeamNameColor( pLocal, pPlayer, Vars::Colors::Relative.Value ), Vars::Menu::Theme::Background.Value } );
+				tCache.m_vText.push_back({ ESPTextEnum::Top, F::PlayerUtils.GetPlayerName(iIndex, pi.name), H::Color.GetEntityNameColor(pLocal, pPlayer, Vars::Colors::Relative.Value), Vars::Menu::Theme::Background.Value });
 
 			std::vector<PriorityLabel_t> vTags = {};
 			if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Priority)
 			{
-				/*if (auto pTag = F::PlayerUtils.GetSignificantTag(pi.friendsID, 1)) // 50 alpha as white outline tends to be more apparent
+				/*/if (auto pTag = F::PlayerUtils.GetSignificantTag(pi.friendsID, 1)) // 50 alpha as white outline tends to be more apparent
 					tCache.m_vText.push_back({ TextTop, pTag->Name, pTag->Color, H::Draw.IsColorDark(pTag->Color) ? Color_t(255, 255, 255, 50) : Color_t(0, 0, 0, 255) });
 			}*/
 
@@ -113,22 +102,22 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 				if (H::Entities.IsFriend(iIndex))
 				{
 					PriorityLabel_t pTag = F::PlayerUtils.m_vTags[F::PlayerUtils.TagToIndex(FRIEND_TAG)];
-						if (pTag.Label)
+					if (pTag.Label)
 						vTags.push_back(pTag);
 				}
 				if (H::Entities.InParty(iIndex))
 				{
 					auto& pTag = F::PlayerUtils.m_vTags[F::PlayerUtils.TagToIndex(PARTY_TAG)];
-						if (pTag.Label)
+					if (pTag.Label)
 						vTags.push_back(pTag);
 				}
 
 				if (vTags.size())
 				{
-						std::sort(vTags.begin(), vTags.end(), [&](const auto a, const auto b) -> bool
-					{
+					std::sort(vTags.begin(), vTags.end(), [&](const auto a, const auto b) -> bool
+						{
 
-								return a.Name < b.Name;
+							return a.Name < b.Name;
 						});
 
 					for (auto& pTag : vTags) // 50 alpha as white outline tends to be more apparent
@@ -218,14 +207,14 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 		{
 			int iAverage = TIME_TO_TICKS(F::MoveSim.GetPredictedDelta(pPlayer));
 			int iCurrent = H::Entities.GetChoke(pPlayer->entindex());
-			tCache.m_vText.push_back({ ESPTextEnum::Right, std::format("LAG {}, {}", iAverage, iCurrent), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+			tCache.m_vText.push_back({ ESPTextEnum::Right, std::format("Lag {}, {}", iAverage, iCurrent), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 		}
 
 		{
 			if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::LagCompensation && !pPlayer->IsDormant() && pPlayer != pLocal)
 			{
 				if (H::Entities.GetLagCompensation(pPlayer->entindex()))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "LAGCOMP", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Lagcomp", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
 			}
 
 			if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Ping && pResource && pPlayer != pLocal)
@@ -235,7 +224,7 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 				{
 					int iPing = pResource->GetPing(pPlayer->entindex());
 					if (iPing && (iPing >= 200 || iPing <= 5))
-						tCache.m_vText.push_back({ ESPTextEnum::Right, std::format("{}MS", iPing), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+						tCache.m_vText.push_back({ ESPTextEnum::Right, std::format("{}MS", iPing), Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
 				}
 			}
 
@@ -246,7 +235,7 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 				{
 					int iKDR = iKills / std::max(iDeaths, 1);
 					if (iKDR >= 10)
-						tCache.m_vText.push_back({ ESPTextEnum::Right, std::format("HIGH KD [{} / {}]", iKills, iDeaths), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+						tCache.m_vText.push_back({ ESPTextEnum::Right, std::format("High KD [{} / {}]", iKills, iDeaths), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 				}
 			}
 
@@ -255,16 +244,16 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 			{
 				bool bCrits = false, bMiniCrits = false;
 				if (pPlayer->IsCritBoosted())
-					pWeapon && pWeapon->GetWeaponID() == TF_WEAPON_PARTICLE_CANNON ? bMiniCrits = true : bCrits = true;
+					pWeapon&& pWeapon->GetWeaponID() == TF_WEAPON_PARTICLE_CANNON ? bMiniCrits = true : bCrits = true;
 				if (pPlayer->IsMiniCritBoosted())
-					pWeapon && pWeapon->m_iItemDefinitionIndex() == Sniper_t_TheBushwacka ? bCrits = true : bMiniCrits = true;
+					pWeapon&& pWeapon->m_iItemDefinitionIndex() == Sniper_t_TheBushwacka ? bCrits = true : bMiniCrits = true;
 				if (pWeapon && pWeapon->m_iItemDefinitionIndex() == Soldier_t_TheMarketGardener && pPlayer->InCond(TF_COND_BLASTJUMPING))
 					bCrits = true, bMiniCrits = false;
 
 				if (bCrits)
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "CRITS",Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Crits", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
 				else if (bMiniCrits)
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "MINI-CRITS", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Mini-crits", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
 
 				if (pPlayer->InCond(TF_COND_RADIUSHEAL) ||
 					pPlayer->InCond(TF_COND_HEALTH_BUFF) ||
@@ -273,97 +262,97 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 					pPlayer->InCond(TF_COND_HALLOWEEN_QUICK_HEAL) ||
 					pPlayer->InCond(TF_COND_HALLOWEEN_HELL_HEAL) ||
 					pPlayer->InCond(TF_COND_KING_BUFFED))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "HP+", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "HP+", Vars::Colors::IndicatorTextGood.Value, Vars::Menu::Theme::Background.Value });
 				else if (pPlayer->InCond(TF_COND_HEALTH_OVERHEALED))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "HP", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "HP", Vars::Colors::IndicatorTextGood.Value, Vars::Menu::Theme::Background.Value });
 
 				if (pPlayer->InCond(TF_COND_INVULNERABLE) ||
 					pPlayer->InCond(TF_COND_INVULNERABLE_HIDE_UNLESS_DAMAGED) ||
 					pPlayer->InCond(TF_COND_INVULNERABLE_USER_BUFF) ||
 					pPlayer->InCond(TF_COND_INVULNERABLE_CARD_EFFECT))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "UBER", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Uber", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
 				else if (pPlayer->InCond(TF_COND_PHASE))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "BONK", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Bonk", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 
 				/* vaccinator effects */
 				if (pPlayer->InCond(TF_COND_MEDIGUN_UBER_BULLET_RESIST) || pPlayer->InCond(TF_COND_BULLET_IMMUNE))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "BULLET+", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Bullet+", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
 				else if (pPlayer->InCond(TF_COND_MEDIGUN_SMALL_BULLET_RESIST))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "BULLET", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Bullet", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 				if (pPlayer->InCond(TF_COND_MEDIGUN_UBER_BLAST_RESIST) || pPlayer->InCond(TF_COND_BLAST_IMMUNE))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "BLAST+", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Blast+", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
 				else if (pPlayer->InCond(TF_COND_MEDIGUN_SMALL_BLAST_RESIST))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "BLAST", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Blast", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 				if (pPlayer->InCond(TF_COND_MEDIGUN_UBER_FIRE_RESIST) || pPlayer->InCond(TF_COND_FIRE_IMMUNE))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "FIRE+", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Fire+", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
 				else if (pPlayer->InCond(TF_COND_MEDIGUN_SMALL_FIRE_RESIST))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "FIRE", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Fire", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 
 				if (pPlayer->InCond(TF_COND_OFFENSEBUFF))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "BANNER", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Banner", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
 				if (pPlayer->InCond(TF_COND_DEFENSEBUFF))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "BATTALIONS", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Battalions", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
 				if (pPlayer->InCond(TF_COND_REGENONDAMAGEBUFF))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "CONCH", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Conch", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
 
 				if (pPlayer->InCond(TF_COND_BLASTJUMPING))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "BLASTJUMP", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Blastjump", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 
 				if (pPlayer->InCond(TF_COND_RUNE_STRENGTH))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "STRENGTH", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Strength", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 				if (pPlayer->InCond(TF_COND_RUNE_HASTE))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "HASTE", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Haste", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 				if (pPlayer->InCond(TF_COND_RUNE_REGEN))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "REGEN", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Regen", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 				if (pPlayer->InCond(TF_COND_RUNE_RESIST))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "RESISTANCE", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Resistance", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 				if (pPlayer->InCond(TF_COND_RUNE_VAMPIRE))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "VAMPIRE", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Vampire", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 				if (pPlayer->InCond(TF_COND_RUNE_REFLECT))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "REFLECT", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Reflect", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 				if (pPlayer->InCond(TF_COND_RUNE_PRECISION))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "PRECISION", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Precision", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 				if (pPlayer->InCond(TF_COND_RUNE_AGILITY))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "AGILITY", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Agility", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 				if (pPlayer->InCond(TF_COND_RUNE_KNOCKOUT))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "KNOCKOUT", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Knockout", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 				if (pPlayer->InCond(TF_COND_RUNE_KING))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "KING", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "King", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 				if (pPlayer->InCond(TF_COND_RUNE_PLAGUE))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "PLAGUE", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Plague", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 				if (pPlayer->InCond(TF_COND_RUNE_SUPERNOVA))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "SUPERNOVA", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Supernova", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 				if (pPlayer->InCond(TF_COND_POWERUPMODE_DOMINANT))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "DOMINANT", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Dominant", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 			}
 
 			// Debuffs
 			if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Debuffs)
 			{
 				if (pPlayer->InCond(TF_COND_MARKEDFORDEATH) || pPlayer->InCond(TF_COND_MARKEDFORDEATH_SILENT))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "MARKED", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Marked", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 
 				if (pPlayer->InCond(TF_COND_URINE))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "JARATE", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Jarate", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 
 				if (pPlayer->InCond(TF_COND_MAD_MILK))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "MILK", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Milk", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 
 				if (pPlayer->InCond(TF_COND_STUNNED))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "STUN", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Stun", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 
 				if (pPlayer->InCond(TF_COND_BURNING))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "BURN", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Burn", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 
 				if (pPlayer->InCond(TF_COND_BLEEDING))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "BLEED", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Bleed", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 			}
 
 			// Misc
 			if (Vars::ESP::Player.Value & Vars::ESP::PlayerEnum::Misc)
 			{
 				if (Vars::Visuals::Removals::Taunts.Value && pPlayer->InCond(TF_COND_TAUNTING))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "TAUNT", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Taunt", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 
 				if (pPlayer->m_bFeignDeathReady())
 					tCache.m_vText.push_back({ ESPTextEnum::Right, "DR", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
@@ -373,7 +362,7 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 					switch (pWeapon ? pWeapon->GetWeaponID() : -1)
 					{
 					case TF_WEAPON_MINIGUN:
-						tCache.m_vText.push_back({ ESPTextEnum::Right, "REV", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+						tCache.m_vText.push_back({ ESPTextEnum::Right, "Rev", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 						break;
 					case TF_WEAPON_SNIPERRIFLE:
 					case TF_WEAPON_SNIPERRIFLE_CLASSIC:
@@ -381,7 +370,7 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 					{
 						if (iIndex == I::EngineClient->GetLocalPlayer())
 						{
-							tCache.m_vText.push_back({ ESPTextEnum::Right, std::format("CHARGING {:.0f}%%", Math::RemapValClamped(pWeapon->As<CTFSniperRifle>()->m_flChargedDamage(), 0.f, 150.f, 0.f, 100.f)), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+							tCache.m_vText.push_back({ ESPTextEnum::Right, std::format("Charging {:.0f}%%", Math::RemapValClamped(pWeapon->As<CTFSniperRifle>()->m_flChargedDamage(), 0.f, 150.f, 0.f, 100.f)), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 							break;
 						}
 						else
@@ -398,34 +387,34 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 							if (pPlayerDot)
 							{
 								float flChargeTime = std::max(SDK::AttribHookValue(3.f, "mult_sniper_charge_per_sec", pWeapon), 1.5f);
-								tCache.m_vText.push_back({ ESPTextEnum::Right, std::format("CHARGING {:.0f}%%", Math::RemapValClamped(TICKS_TO_TIME(I::ClientState->m_ClockDriftMgr.m_nServerTick) - pPlayerDot->m_flChargeStartTime() - 0.3f, 0.f, flChargeTime, 0.f, 100.f)), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+								tCache.m_vText.push_back({ ESPTextEnum::Right, std::format("Charging {:.0f}%%", Math::RemapValClamped(TICKS_TO_TIME(I::ClientState->m_ClockDriftMgr.m_nServerTick) - pPlayerDot->m_flChargeStartTime() - 0.3f, 0.f, flChargeTime, 0.f, 100.f)), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 								break;
 							}
 						}
-						tCache.m_vText.push_back({ ESPTextEnum::Right, "ZOOM", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+						tCache.m_vText.push_back({ ESPTextEnum::Right, "Charging", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 						break;
 					}
 					case TF_WEAPON_COMPOUND_BOW:
 						if (iIndex == I::EngineClient->GetLocalPlayer())
 						{
-							tCache.m_vText.push_back({ ESPTextEnum::Right, std::format("CHARGING {:.0f}%%", Math::RemapValClamped(TICKS_TO_TIME(I::ClientState->m_ClockDriftMgr.m_nServerTick) - pWeapon->As<CTFPipebombLauncher>()->m_flChargeBeginTime(), 0.f, 1.f, 0.f, 100.f)), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+							tCache.m_vText.push_back({ ESPTextEnum::Right, std::format("Charging {:.0f}%%", Math::RemapValClamped(TICKS_TO_TIME(I::ClientState->m_ClockDriftMgr.m_nServerTick) - pWeapon->As<CTFPipebombLauncher>()->m_flChargeBeginTime(), 0.f, 1.f, 0.f, 100.f)), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 							break;
 						}
-						tCache.m_vText.push_back({ ESPTextEnum::Right, "CHARGING", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+						tCache.m_vText.push_back({ ESPTextEnum::Right, "Charging", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 						break;
 					default:
-						tCache.m_vText.push_back({ ESPTextEnum::Right, "CHARGING", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+						tCache.m_vText.push_back({ ESPTextEnum::Right, "Charging", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 					}
 				}
 
 				if (pPlayer->InCond(TF_COND_SHIELD_CHARGE))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "CHARGE", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Charge", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 
 				if (pPlayer->InCond(TF_COND_STEALTHED) || pPlayer->InCond(TF_COND_STEALTHED_BLINK) || pPlayer->InCond(TF_COND_STEALTHED_USER_BUFF) || pPlayer->InCond(TF_COND_STEALTHED_USER_BUFF_FADING))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, std::format("CLOAK {:.0F}%%", pPlayer->GetInvisPercentage()), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, std::format("Invis {:.0f}%%", pPlayer->GetInvisPercentage()), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 
 				if (pPlayer->InCond(TF_COND_DISGUISING) || pPlayer->InCond(TF_COND_DISGUISED))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "DISGUISE", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Disguise", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 			}
 		}
 	}
@@ -465,7 +454,7 @@ void CESP::StoreBuildings(CTFPlayer* pLocal)
 
 		BuildingCache& tCache = m_mBuildingCache[pEntity];
 		tCache.m_flAlpha = Vars::ESP::ActiveAlpha.Value / 255.f;
-		tCache.m_tColor = H::Color.GetEntityDrawColor( pLocal, ( pOwner ? pOwner : pEntity ), Vars::Colors::Relative.Value );
+		tCache.m_tColor = H::Color.GetTeamColor(pLocal->m_iTeamNum(), (pOwner ? pOwner : pEntity)->m_iTeamNum(), Vars::Colors::Relative.Value);
 		tCache.m_bBox = Vars::ESP::Building.Value & Vars::ESP::BuildingEnum::Box;
 
 		if (Vars::ESP::Building.Value & Vars::ESP::BuildingEnum::Distance)
@@ -479,11 +468,11 @@ void CESP::StoreBuildings(CTFPlayer* pLocal)
 			const char* szName = "Building";
 			switch (pEntity->GetClassID())
 			{
-			case ETFClassID::CObjectSentrygun: szName = bIsMini ? "MINI-SENTRY" : "SENTRY"; break;
-			case ETFClassID::CObjectDispenser: szName = "DISPENSER"; break;
-			case ETFClassID::CObjectTeleporter: szName = pBuilding->m_iObjectMode() ? "TELEPORTER EXIT" : "TELEPORTER ENTRANCE";
+			case ETFClassID::CObjectSentrygun: szName = bIsMini ? "Mini-Sentry" : "Sentry"; break;
+			case ETFClassID::CObjectDispenser: szName = "Dispenser"; break;
+			case ETFClassID::CObjectTeleporter: szName = pBuilding->m_iObjectMode() ? "Teleporter Exit" : "Teleporter Entrance";
 			}
-			tCache.m_vText.push_back({ ESPTextEnum::Top, szName, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+			tCache.m_vText.push_back({ ESPTextEnum::Top, szName, H::Color.GetEntityNameColor(pLocal, (pOwner ? pOwner : pEntity), Vars::Colors::Relative.Value), Vars::Menu::Theme::Background.Value });
 		}
 
 		float flHealth = pBuilding->m_iHealth(), flMaxHealth = pBuilding->m_iMaxHealth();
@@ -509,20 +498,20 @@ void CESP::StoreBuildings(CTFPlayer* pLocal)
 				tCache.m_vText.push_back({ ESPTextEnum::Right, std::format("{:.0f}%%", flConstructed * 100.f), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 
 			if (pBuilding->IsSentrygun() && pBuilding->As<CObjectSentrygun>()->m_bPlayerControlled())
-				tCache.m_vText.push_back({ ESPTextEnum::Right, "WRANGLED", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+				tCache.m_vText.push_back({ ESPTextEnum::Right, "Wrangled", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
 
 			if (pBuilding->m_bHasSapper())
-				tCache.m_vText.push_back({ ESPTextEnum::Right, "SAPPED", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+				tCache.m_vText.push_back({ ESPTextEnum::Right, "Sapped", Vars::Colors::IndicatorTextGood.Value, Vars::Menu::Theme::Background.Value });
 			else if (pBuilding->m_bDisabled())
-				tCache.m_vText.push_back({ ESPTextEnum::Right, "DISABLED", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+				tCache.m_vText.push_back({ ESPTextEnum::Right, "Disabled", Vars::Colors::IndicatorTextGood.Value, Vars::Menu::Theme::Background.Value });
 
 			if (pBuilding->IsSentrygun() && !pBuilding->m_bBuilding())
 			{
 				int iShells, iMaxShells, iRockets, iMaxRockets; pBuilding->As<CObjectSentrygun>()->GetAmmoCount(iShells, iMaxShells, iRockets, iMaxRockets);
 				if (!iShells)
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "NO AMMO", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "No ammo", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 				if (!bIsMini && !iRockets)
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "NO ROCKETS", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "No rockets", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 			}
 		}
 	}
@@ -587,7 +576,7 @@ void CESP::StoreProjectiles(CTFPlayer* pLocal)
 		}
 		case ETFClassID::CTFBaseProjectile:
 		case ETFClassID::CTFProjectile_EnergyRing:
-		//case ETFClassID::CTFProjectile_Syringe:
+			//case ETFClassID::CTFProjectile_Syringe:
 		{
 			auto pWeapon = pEntity->As<CTFBaseProjectile>()->m_hLauncher().Get();
 			pOwner = pWeapon ? pWeapon->As<CTFWeaponBase>()->m_hOwner().Get() : nullptr;
@@ -618,7 +607,7 @@ void CESP::StoreProjectiles(CTFPlayer* pLocal)
 
 		WorldCache& tCache = m_mWorldCache[pEntity];
 		tCache.m_flAlpha = Vars::ESP::ActiveAlpha.Value / 255.f;
-		tCache.m_tColor = H::Color.GetEntityDrawColor( pLocal, ( pOwner ? pOwner : pEntity ), Vars::Colors::Relative.Value );
+		tCache.m_tColor = H::Color.GetTeamColor(pLocal->m_iTeamNum(), (pOwner ? pOwner : pEntity)->m_iTeamNum(), Vars::Colors::Relative.Value);
 		tCache.m_bBox = Vars::ESP::Projectile.Value & Vars::ESP::ProjectileEnum::Box;
 
 		if (Vars::ESP::Projectile.Value & Vars::ESP::ProjectileEnum::Distance)
@@ -632,9 +621,9 @@ void CESP::StoreProjectiles(CTFPlayer* pLocal)
 			const char* szName = "Projectile";
 			switch (pEntity->GetClassID())
 			{
-			//case ETFClassID::CBaseProjectile:
-			//case ETFClassID::CBaseGrenade:
-			//case ETFClassID::CTFWeaponBaseGrenadeProj:
+				//case ETFClassID::CBaseProjectile:
+				//case ETFClassID::CBaseGrenade:
+				//case ETFClassID::CTFWeaponBaseGrenadeProj:
 			case ETFClassID::CTFWeaponBaseMerasmusGrenade: szName = "Bomb"; break;
 			case ETFClassID::CTFGrenadePipebombProjectile: szName = pEntity->As<CTFGrenadePipebombProjectile>()->HasStickyEffects() ? "Sticky" : "Pipe"; break;
 			case ETFClassID::CTFStunBall: szName = "Baseball"; break;
@@ -646,13 +635,13 @@ void CESP::StoreProjectiles(CTFPlayer* pLocal)
 			case ETFClassID::CTFProjectile_ThrowableBreadMonster: szName = "Milk"; break;
 			case ETFClassID::CTFProjectile_SpellBats:
 			case ETFClassID::CTFProjectile_SpellKartBats: szName = "Bats"; break;
-			case ETFClassID::CTFProjectile_SpellMeteorShower: szName = "Meteor Shower"; break;
+			case ETFClassID::CTFProjectile_SpellMeteorShower: szName = "Meteor shower"; break;
 			case ETFClassID::CTFProjectile_SpellMirv:
 			case ETFClassID::CTFProjectile_SpellPumpkin: szName = "Pumpkin"; break;
 			case ETFClassID::CTFProjectile_SpellSpawnBoss: szName = "Monoculus"; break;
 			case ETFClassID::CTFProjectile_SpellSpawnHorde:
 			case ETFClassID::CTFProjectile_SpellSpawnZombie: szName = "Skeleton"; break;
-			case ETFClassID::CTFProjectile_SpellTransposeTeleport: szName = "Teleporter"; break;
+			case ETFClassID::CTFProjectile_SpellTransposeTeleport: szName = "Teleport"; break;
 				//case ETFClassID::CTFProjectile_Throwable:
 				//case ETFClassID::CTFProjectile_ThrowableBrick:
 				//case ETFClassID::CTFProjectile_ThrowableRepel: szName = "Throwable"; break;
@@ -665,7 +654,7 @@ void CESP::StoreProjectiles(CTFPlayer* pLocal)
 			case ETFClassID::CTFProjectile_EnergyBall:
 			case ETFClassID::CTFProjectile_SentryRocket: szName = "Rocket"; break;
 			case ETFClassID::CTFProjectile_BallOfFire: szName = "Fire"; break;
-			case ETFClassID::CTFProjectile_MechanicalArmOrb: szName = "Short Circuit"; break;
+			case ETFClassID::CTFProjectile_MechanicalArmOrb: szName = "Short circuit"; break;
 			case ETFClassID::CTFProjectile_SpellFireball: szName = "Fireball"; break;
 			case ETFClassID::CTFProjectile_SpellLightningOrb: szName = "Lightning"; break;
 			case ETFClassID::CTFProjectile_SpellKartOrb: szName = "Fist"; break;
@@ -674,7 +663,7 @@ void CESP::StoreProjectiles(CTFPlayer* pLocal)
 			case ETFClassID::CTFProjectile_EnergyRing: szName = "Energy"; break;
 				//case ETFClassID::CTFProjectile_Syringe: szName = "Syringe";
 			}
-			tCache.m_vText.push_back({ ESPTextEnum::Top, szName, Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+			tCache.m_vText.push_back({ ESPTextEnum::Top, szName, H::Color.GetEntityNameColor(pLocal, (pOwner ? pOwner : pEntity), Vars::Colors::Relative.Value), Vars::Menu::Theme::Background.Value });
 		}
 
 		if (Vars::ESP::Projectile.Value & Vars::ESP::ProjectileEnum::Flags)
@@ -704,15 +693,13 @@ void CESP::StoreProjectiles(CTFPlayer* pLocal)
 			case ETFClassID::CTFProjectile_ThrowableBrick:
 			case ETFClassID::CTFProjectile_ThrowableRepel:
 				if (pEntity->As<CTFWeaponBaseGrenadeProj>()->m_bCritical())
-
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "CRIT", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
-
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Crit", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
 				break;
 			case ETFClassID::CTFProjectile_Arrow:
 			case ETFClassID::CTFProjectile_GrapplingHook:
 			case ETFClassID::CTFProjectile_HealingBolt:
 				if (pEntity->As<CTFProjectile_Arrow>()->m_bCritical())
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "CRIT", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Crit", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
 				break;
 			case ETFClassID::CTFProjectile_Rocket:
 			case ETFClassID::CTFProjectile_BallOfFire:
@@ -722,16 +709,15 @@ void CESP::StoreProjectiles(CTFPlayer* pLocal)
 			case ETFClassID::CTFProjectile_SpellLightningOrb:
 			case ETFClassID::CTFProjectile_SpellKartOrb:
 				if (pEntity->As<CTFProjectile_Rocket>()->m_bCritical())
-
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "CRIT", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Crit", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
 				break;
 			case ETFClassID::CTFProjectile_EnergyBall:
 				if (pEntity->As<CTFProjectile_EnergyBall>()->m_bChargedShot())
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "CHARGE", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Charge", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
 				break;
 			case ETFClassID::CTFProjectile_Flare:
 				if (pEntity->As<CTFProjectile_Flare>()->m_bCritical())
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "CRIT", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Crit", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
 				break;
 			}
 		}
@@ -750,7 +736,7 @@ void CESP::StoreObjective(CTFPlayer* pLocal)
 
 		WorldCache& tCache = m_mWorldCache[pEntity];
 		tCache.m_flAlpha = Vars::ESP::ActiveAlpha.Value / 255.f;
-		tCache.m_tColor = H::Color.GetEntityDrawColor(pLocal, pEntity, Vars::Colors::Relative.Value);
+		tCache.m_tColor = H::Color.GetTeamColor(pLocal->m_iTeamNum(), pEntity->m_iTeamNum(), Vars::Colors::Relative.Value);
 		tCache.m_bBox = Vars::ESP::Objective.Value & Vars::ESP::ObjectiveEnum::Box;
 
 		if (Vars::ESP::Objective.Value & Vars::ESP::ObjectiveEnum::Distance)
@@ -766,27 +752,27 @@ void CESP::StoreObjective(CTFPlayer* pLocal)
 			auto pIntel = pEntity->As<CCaptureFlag>();
 
 			if (Vars::ESP::Objective.Value & Vars::ESP::ObjectiveEnum::Name)
-				tCache.m_vText.push_back({ ESPTextEnum::Top, "INTEL", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+				tCache.m_vText.push_back({ ESPTextEnum::Top, "INTEL", H::Color.GetEntityNameColor(pLocal, pEntity, Vars::Colors::Relative.Value), Vars::Menu::Theme::Background.Value });
 
 			if (Vars::ESP::Objective.Value & Vars::ESP::ObjectiveEnum::Flags)
 			{
 				switch (pIntel->m_nFlagStatus())
 				{
 				case TF_FLAGINFO_HOME:
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "HOME", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Home", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 					break;
 				case TF_FLAGINFO_DROPPED:
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "DROPPED", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Dropped", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 					break;
 				default:
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "STOLEN", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
+					tCache.m_vText.push_back({ ESPTextEnum::Right, "Stolen", Vars::Colors::IndicatorTextBad.Value, Vars::Menu::Theme::Background.Value });
 				}
 			}
 
 			if (Vars::ESP::Objective.Value & Vars::ESP::ObjectiveEnum::IntelReturnTime && pIntel->m_nFlagStatus() == TF_FLAGINFO_DROPPED)
 			{
 				float flReturnTime = std::max(pIntel->m_flResetTime() - TICKS_TO_TIME(I::ClientState->m_ClockDriftMgr.m_nServerTick), 0.f);
-				tCache.m_vText.push_back({ ESPTextEnum::Right, std::format("RETURN {:.1f}s", pIntel->m_flResetTime() - TICKS_TO_TIME(I::ClientState->m_ClockDriftMgr.m_nServerTick)).c_str(), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+				tCache.m_vText.push_back({ ESPTextEnum::Right, std::format("Return {:.1f}s", pIntel->m_flResetTime() - TICKS_TO_TIME(I::ClientState->m_ClockDriftMgr.m_nServerTick)).c_str(), Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 			}
 
 			break;
@@ -854,26 +840,26 @@ void CESP::StoreWorld()
 		{
 			WorldCache& tCache = m_mWorldCache[pEntity];
 
-			const char* szName = "POWERPU";
+			const char* szName = "Powerup";
 			switch (FNV1A::Hash32(I::ModelInfoClient->GetModelName(pEntity->GetModel())))
 			{
-			case FNV1A::Hash32Const("models/pickups/pickup_powerup_agility.mdl"): szName = "AGILITY"; break;
-			case FNV1A::Hash32Const("models/pickups/pickup_powerup_crit.mdl"): szName = "REVENGE"; break;
-			case FNV1A::Hash32Const("models/pickups/pickup_powerup_defense.mdl"): szName = "RESISTANCE"; break;
-			case FNV1A::Hash32Const("models/pickups/pickup_powerup_haste.mdl"): szName = "HASTE"; break;
-			case FNV1A::Hash32Const("models/pickups/pickup_powerup_king.mdl"): szName = "KING"; break;
-			case FNV1A::Hash32Const("models/pickups/pickup_powerup_knockout.mdl"): szName = "KNOCKOUT"; break;
-			case FNV1A::Hash32Const("models/pickups/pickup_powerup_plague.mdl"): szName = "PLAGUE"; break;
-			case FNV1A::Hash32Const("models/pickups/pickup_powerup_precision.mdl"): szName = "PPRECISION"; break;
-			case FNV1A::Hash32Const("models/pickups/pickup_powerup_reflect.mdl"): szName = "REFLECT"; break;
-			case FNV1A::Hash32Const("models/pickups/pickup_powerup_regen.mdl"): szName = "REGENERATION"; break;
-			//case FNV1A::Hash32Const("models/pickups/pickup_powerup_resistance.mdl"): szName = "11"; break;
-			case FNV1A::Hash32Const("models/pickups/pickup_powerup_strength.mdl"): szName = "STRENGHT"; break;
-			//case FNV1A::Hash32Const("models/pickups/pickup_powerup_strength_arm.mdl"): szName = "13"; break;
-			case FNV1A::Hash32Const("models/pickups/pickup_powerup_supernova.mdl"): szName = "SUPERNOVA"; break;
-			//case FNV1A::Hash32Const("models/pickups/pickup_powerup_thorns.mdl"): szName = "15"; break;
-			//case FNV1A::Hash32Const("models/pickups/pickup_powerup_uber.mdl"): szName = "16"; break;
-			case FNV1A::Hash32Const("models/pickups/pickup_powerup_vampire.mdl"): szName = "VAMPIRE";
+			case FNV1A::Hash32Const("models/pickups/pickup_powerup_agility.mdl"): szName = "Agility"; break;
+			case FNV1A::Hash32Const("models/pickups/pickup_powerup_crit.mdl"): szName = "Revenge"; break;
+			case FNV1A::Hash32Const("models/pickups/pickup_powerup_defense.mdl"): szName = "Resistance"; break;
+			case FNV1A::Hash32Const("models/pickups/pickup_powerup_haste.mdl"): szName = "Haste"; break;
+			case FNV1A::Hash32Const("models/pickups/pickup_powerup_king.mdl"): szName = "King"; break;
+			case FNV1A::Hash32Const("models/pickups/pickup_powerup_knockout.mdl"): szName = "Knockout"; break;
+			case FNV1A::Hash32Const("models/pickups/pickup_powerup_plague.mdl"): szName = "Plague"; break;
+			case FNV1A::Hash32Const("models/pickups/pickup_powerup_precision.mdl"): szName = "Precision"; break;
+			case FNV1A::Hash32Const("models/pickups/pickup_powerup_reflect.mdl"): szName = "Reflect"; break;
+			case FNV1A::Hash32Const("models/pickups/pickup_powerup_regen.mdl"): szName = "Regeneration"; break;
+				//case FNV1A::Hash32Const("models/pickups/pickup_powerup_resistance.mdl"): szName = "11"; break;
+			case FNV1A::Hash32Const("models/pickups/pickup_powerup_strength.mdl"): szName = "Strength"; break;
+				//case FNV1A::Hash32Const("models/pickups/pickup_powerup_strength_arm.mdl"): szName = "13"; break;
+			case FNV1A::Hash32Const("models/pickups/pickup_powerup_supernova.mdl"): szName = "Supernova"; break;
+				//case FNV1A::Hash32Const("models/pickups/pickup_powerup_thorns.mdl"): szName = "15"; break;
+				//case FNV1A::Hash32Const("models/pickups/pickup_powerup_uber.mdl"): szName = "16"; break;
+			case FNV1A::Hash32Const("models/pickups/pickup_powerup_vampire.mdl"): szName = "Vampire";
 			}
 			tCache.m_vText.push_back({ ESPTextEnum::Top, szName, Vars::Colors::Powerup.Value, Vars::Menu::Theme::Background.Value });
 		}
@@ -920,21 +906,13 @@ void CESP::Draw()
 	DrawPlayers();
 }
 
-// Add these member variables to your class to store previous values
-std::unordered_map<int, float> m_mPrevPlayerHealth; // Stores previous health values for each player
-std::unordered_map<int, float> m_mPrevPlayerUber;   // Stores previous Uber values for each player
-
 void CESP::DrawPlayers()
 {
 	if (!(Vars::ESP::Draw.Value & Vars::ESP::DrawEnum::Players) || !Vars::ESP::Player.Value)
 		return;
 
-	const auto& fFont = H::Fonts.GetFont(FONT_ESP_NAME);
-	const int nTall = fFont.m_nTall;
-
-	const auto& fFontSide = H::Fonts.GetFont(FONT_ESP_FLAG);
-	const int nTallSide = fFontSide.m_nTall;
-
+	const auto& fFont = H::Fonts.GetFont(FONT_ESP);
+	const int nTall = fFont.m_nTall + H::Draw.Scale(2);
 	for (auto& [pEntity, tCache] : m_mPlayerCache)
 	{
 		float x, y, w, h;
@@ -973,100 +951,33 @@ void CESP::DrawPlayers()
 
 		if (tCache.m_bHealthBar)
 		{
-			const int healthBarWidth = 1; // 1 pixel wide health bar
-			const int backgroundExtension = 1; // 1 pixel extension on each side
-			const Color_t backgroundColor = { 0, 0, 0, 130 }; // Black background with 130 alpha
-
-			// Smoothly interpolate health value
-			float& prevHealth = m_mPrevPlayerHealth[pEntity->entindex()];
-			prevHealth = std::lerp(prevHealth, tCache.m_flHealth, 0.1f); // Adjust interpolation speed (0.1f)
-
-			// Ensure prevHealth reaches exactly 1.0f when at full health
-			if (tCache.m_flHealth >= 1.0f)
-				prevHealth = 1.0f;
-
-			// Draw the black background
-			H::Draw.FillRect(
-				x - H::Draw.Scale(6) - backgroundExtension, // X position extended by 1 pixel
-				y - backgroundExtension, // Y position extended by 1 pixel
-				healthBarWidth + 2 * backgroundExtension, // Width extended by 2 pixels
-				h + 2 * backgroundExtension, // Height extended by 2 pixels
-				backgroundColor
-			);
-
-			if (prevHealth > 1.f)
+			if (tCache.m_flHealth > 1.f)
 			{
 				// Overhealed: Cap the health bar at full height and keep "IndicatorGood" color
 				Color_t cColor = Vars::Colors::IndicatorGood.Value;
-				H::Draw.FillRectPercent(
-					x - H::Draw.Scale(6), y,
-					healthBarWidth, h,
-					1.f, cColor,
-					{ 0, 0, 0, 0 }, // No outline
-					ALIGN_BOTTOM, true
-				);
+				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, 1.f, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
 			}
-			else if (prevHealth > 0.5f)
+			else if (tCache.m_flHealth > 0.5f)
 			{
 				// Mid health range: Lerp between "IndicatorGood" and "IndicatorMid"
-				float midLerpFactor = (prevHealth - 0.5f) * 2.f;  // Normalize to 0-1
+				float midLerpFactor = (tCache.m_flHealth - 0.5f) * 2.f;  // Normalize to 0-1
 				Color_t cColor = Vars::Colors::IndicatorMid.Value.Lerp(Vars::Colors::IndicatorGood.Value, midLerpFactor);
-				H::Draw.FillRectPercent(
-					x - H::Draw.Scale(6), y,
-					healthBarWidth, h,
-					prevHealth, cColor,
-					{ 0, 0, 0, 0 }, // No outline
-					ALIGN_BOTTOM, true
-				);
+				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, tCache.m_flHealth, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
 			}
 			else
 			{
 				// Low health range: Lerp between "IndicatorMid" and "IndicatorBad"
-				float lowLerpFactor = prevHealth * 2.f;  // Normalize to 0-1
+				float lowLerpFactor = tCache.m_flHealth * 2.f;  // Normalize to 0-1
 				Color_t cColor = Vars::Colors::IndicatorBad.Value.Lerp(Vars::Colors::IndicatorMid.Value, lowLerpFactor);
-				H::Draw.FillRectPercent(
-					x - H::Draw.Scale(6), y,
-					healthBarWidth, h,
-					prevHealth, cColor,
-					{ 0, 0, 0, 0 }, // No outline
-					ALIGN_BOTTOM, true
-				);
+				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, tCache.m_flHealth, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
 			}
 
 			lOffset += H::Draw.Scale(6);
 		}
 
-		// UberBar
 		if (tCache.m_bUberBar)
 		{
-			const int uberBarHeight = 1; // 1 pixel high UberBar
-			const int backgroundExtension = 1; // 1 pixel extension on each side
-			const Color_t backgroundColor = { 0, 0, 0, 130 }; // Black background with 130 alpha
-
-			// Smoothly interpolate Uber value
-			float& prevUber = m_mPrevPlayerUber[pEntity->entindex()];
-			prevUber = std::lerp(prevUber, tCache.m_flUber, 0.1f); // Adjust interpolation speed (0.1f)
-
-			// Draw the black background for the UberBar
-			H::Draw.FillRect(
-				x - backgroundExtension, // X position extended by 1 pixel
-				y + h + H::Draw.Scale(4) - backgroundExtension, // Y position extended by 1 pixel
-				w + 2 * backgroundExtension, // Width extended by 2 pixels
-				uberBarHeight + 2 * backgroundExtension, // Height extended by 2 pixels
-				backgroundColor
-			);
-
-			// Draw the UberBar
-			H::Draw.FillRectPercent(
-				x, // X position
-				y + h + H::Draw.Scale(4), // Y position (adjusted for placement)
-				w, // Width
-				uberBarHeight, // Height (1 pixel)
-				prevUber, // Interpolated Uber percentage
-				Vars::Colors::IndicatorMisc.Value, // UberBar color
-				{ 0, 0, 0, 0 } // No outline
-			);
-
+			H::Draw.FillRectPercent(x, y + h + H::Draw.Scale(4), w, H::Draw.Scale(2, Scale_Round), tCache.m_flUber, Vars::Colors::IndicatorMisc.Value);
 			bOffset += H::Draw.Scale(6);
 		}
 
@@ -1084,33 +995,23 @@ void CESP::DrawPlayers()
 				bOffset += nTall;
 				break;
 			case ESPTextEnum::Right:
-				H::Draw.String(fFontSide, r, t + iVerticalOffset + rOffset, tColor, ALIGN_TOPLEFT, sText.c_str());
-				rOffset += nTallSide;
+				H::Draw.String(fFont, r, t + iVerticalOffset + rOffset, tColor, ALIGN_TOPLEFT, sText.c_str());
+				rOffset += nTall;
 				break;
 			case ESPTextEnum::Health:
-			{
-				// Use the interpolated health value for positioning
-				float& prevHealth = m_mPrevPlayerHealth[pEntity->entindex()];
-				float clampedHealth = std::min(prevHealth, 1.0f); // Clamp health to 1.0f for positioning
-				H::Draw.String(fFontSide, l - lOffset, t + iVerticalOffset + h - h * clampedHealth, tColor, ALIGN_TOPRIGHT, sText.c_str());
-				rOffset += nTallSide;
+				H::Draw.String(fFont, l - lOffset, t + iVerticalOffset + h - h * std::min(tCache.m_flHealth, 1.f), tColor, ALIGN_TOPRIGHT, sText.c_str());
 				break;
-			}
 			case ESPTextEnum::Uber:
-				H::Draw.String(fFontSide, r, y + h, tColor, ALIGN_TOPLEFT, sText.c_str());
-				rOffset += nTallSide;
-				break;
+				H::Draw.String(fFont, r, y + h, tColor, ALIGN_TOPLEFT, sText.c_str());
 			}
 		}
 
-		// Draw player class icon
 		if (tCache.m_iClassIcon)
 		{
 			int size = H::Draw.Scale(18, Scale_Round);
 			H::Draw.Texture(m, t - tOffset, size, size, tCache.m_iClassIcon - 1, ALIGN_BOTTOM);
 		}
 
-		// Draw weapon icon
 		if (tCache.m_pWeaponIcon)
 		{
 			float flW = tCache.m_pWeaponIcon->Width(), flH = tCache.m_pWeaponIcon->Height();
@@ -1121,19 +1022,14 @@ void CESP::DrawPlayers()
 
 	I::MatSystemSurface->DrawSetAlphaMultiplier(1.f);
 }
-// Add this member variable to your class to store previous health values for buildings
-std::unordered_map<int, float> m_mPrevBuildingHealth; // Stores previous health values for each building
 
 void CESP::DrawBuildings()
 {
 	if (!(Vars::ESP::Draw.Value & Vars::ESP::DrawEnum::Buildings) || !Vars::ESP::Building.Value)
 		return;
 
-	const auto& fFont = H::Fonts.GetFont(FONT_ESP_NAME);
-	const int nTall = fFont.m_nTall;
-
-	const auto& fFontSide = H::Fonts.GetFont(FONT_ESP_FLAG);
-	const int nTallSide = fFontSide.m_nTall;
+	const auto& fFont = H::Fonts.GetFont(FONT_ESP);
+	const int nTall = fFont.m_nTall + H::Draw.Scale(2);
 
 	for (auto& [pEntity, tCache] : m_mBuildingCache)
 	{
@@ -1152,64 +1048,25 @@ void CESP::DrawBuildings()
 
 		if (tCache.m_bHealthBar)
 		{
-			const int healthBarWidth = 1; // 1 pixel wide health bar
-			const int backgroundExtension = 1; // 1 pixel extension on each side
-			const Color_t backgroundColor = { 0, 0, 0, 130 }; // Black background with 130 alpha
-
-			// Smoothly interpolate health value
-			float& prevHealth = m_mPrevBuildingHealth[pEntity->entindex()];
-			prevHealth = std::lerp(prevHealth, tCache.m_flHealth, 0.1f); // Adjust interpolation speed (0.1f)
-
-			// Ensure prevHealth reaches exactly 1.0f when at full health
-			if (tCache.m_flHealth >= 1.0f)
-				prevHealth = 1.0f;
-
-			// Draw the black background
-			H::Draw.FillRect(
-				x - H::Draw.Scale(6) - backgroundExtension, // X position extended by 1 pixel
-				y - backgroundExtension, // Y position extended by 1 pixel
-				healthBarWidth + 2 * backgroundExtension, // Width extended by 2 pixels
-				h + 2 * backgroundExtension, // Height extended by 2 pixels
-				backgroundColor
-			);
-
-			if (prevHealth > 1.f)
+			if (tCache.m_flHealth > 1.f)
 			{
-				// Overhealed: Cap the health bar at full height and keep "IndicatorGood" color
+				// Overhealed: Use full height and "IndicatorGood" color
 				Color_t cColor = Vars::Colors::IndicatorGood.Value;
-				H::Draw.FillRectPercent(
-					x - H::Draw.Scale(6), y,
-					healthBarWidth, h,
-					1.f, cColor,
-					{ 0, 0, 0, 0 }, // No outline
-					ALIGN_BOTTOM, true
-				);
+				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, 1.f, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
 			}
-			else if (prevHealth > 0.5f)
+			else if (tCache.m_flHealth > 0.5f)
 			{
 				// Mid health range: Lerp between "IndicatorGood" and "IndicatorMid"
-				float midLerpFactor = (prevHealth - 0.5f) * 2.f;  // Normalize to 0-1
+				float midLerpFactor = (tCache.m_flHealth - 0.5f) * 2.f;  // Normalize to 0-1
 				Color_t cColor = Vars::Colors::IndicatorMid.Value.Lerp(Vars::Colors::IndicatorGood.Value, midLerpFactor);
-				H::Draw.FillRectPercent(
-					x - H::Draw.Scale(6), y,
-					healthBarWidth, h,
-					prevHealth, cColor,
-					{ 0, 0, 0, 0 }, // No outline
-					ALIGN_BOTTOM, true
-				);
+				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, tCache.m_flHealth, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
 			}
 			else
 			{
 				// Low health range: Lerp between "IndicatorMid" and "IndicatorBad"
-				float lowLerpFactor = prevHealth * 2.f;  // Normalize to 0-1
+				float lowLerpFactor = tCache.m_flHealth * 2.f;  // Normalize to 0-1
 				Color_t cColor = Vars::Colors::IndicatorBad.Value.Lerp(Vars::Colors::IndicatorMid.Value, lowLerpFactor);
-				H::Draw.FillRectPercent(
-					x - H::Draw.Scale(6), y,
-					healthBarWidth, h,
-					prevHealth, cColor,
-					{ 0, 0, 0, 0 }, // No outline
-					ALIGN_BOTTOM, true
-				);
+				H::Draw.FillRectPercent(x - H::Draw.Scale(6), y, H::Draw.Scale(2, Scale_Round), h, tCache.m_flHealth, cColor, { 0, 0, 0, 255 }, ALIGN_BOTTOM, true);
 			}
 
 			lOffset += H::Draw.Scale(6);
@@ -1229,18 +1086,12 @@ void CESP::DrawBuildings()
 				bOffset += nTall;
 				break;
 			case ESPTextEnum::Right:
-				H::Draw.String(fFontSide, r, t + iVerticalOffset + rOffset, tColor, ALIGN_TOPLEFT, sText.c_str());
-				rOffset += nTallSide;
+				H::Draw.String(fFont, r, t + iVerticalOffset + rOffset, tColor, ALIGN_TOPLEFT, sText.c_str());
+				rOffset += nTall;
 				break;
 			case ESPTextEnum::Health:
-			{
-				// Use the interpolated health value for positioning
-				float& prevHealth = m_mPrevBuildingHealth[pEntity->entindex()];
-				float clampedHealth = std::min(prevHealth, 1.0f); // Clamp health to 1.0f for positioning
-				H::Draw.String(fFontSide, l - lOffset, t + iVerticalOffset + h - h * clampedHealth, tColor, ALIGN_TOPRIGHT, sText.c_str());
-				rOffset += nTallSide;
+				H::Draw.String(fFont, l - lOffset, t + iVerticalOffset + h - h * std::min(tCache.m_flHealth, 1.f), tColor, ALIGN_TOPRIGHT, sText.c_str());
 				break;
-			}
 			}
 		}
 	}
@@ -1250,12 +1101,8 @@ void CESP::DrawBuildings()
 
 void CESP::DrawWorld()
 {
-	const auto& fFont = H::Fonts.GetFont(FONT_ESP_NAME);
-	const int nTall = fFont.m_nTall;
-
-	const auto& fFontSide = H::Fonts.GetFont(FONT_ESP_FLAG);
-	const int nTallSide = fFontSide.m_nTall;
-
+	const auto& fFont = H::Fonts.GetFont(FONT_ESP);
+	const int nTall = fFont.m_nTall + H::Draw.Scale(2);
 	for (auto& [pEntity, tCache] : m_mWorldCache)
 	{
 		float x, y, w, h;
@@ -1285,8 +1132,8 @@ void CESP::DrawWorld()
 				bOffset += nTall;
 				break;
 			case ESPTextEnum::Right:
-				H::Draw.String(fFontSide, r, t + iVerticalOffset + rOffset, tColor, ALIGN_TOPLEFT, sText.c_str());
-				rOffset += nTallSide;
+				H::Draw.String(fFont, r, t + iVerticalOffset + rOffset, tColor, ALIGN_TOPLEFT, sText.c_str());
+				rOffset += nTall;
 			}
 		}
 	}

@@ -1076,7 +1076,7 @@ void CVisuals::DrawPickupTimers()
 		{
 			auto sText = std::format("{:.1f}s", 10.f - flTime);
 			auto tColor = tPickup.Type ? Vars::Colors::Health.Value : Vars::Colors::Ammo.Value;
-			H::Draw.String(H::Fonts.GetFont(FONT_ESP_NAME), vScreen.x, vScreen.y, tColor, ALIGN_CENTER, sText.c_str());
+			H::Draw.String(H::Fonts.GetFont(FONT_ESP), vScreen.x, vScreen.y, tColor, ALIGN_CENTER, sText.c_str());
 		}
 
 		it++;

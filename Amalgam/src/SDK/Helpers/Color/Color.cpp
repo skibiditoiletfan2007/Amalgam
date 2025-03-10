@@ -19,33 +19,50 @@ Color_t CColor::GetTeamColor(int iLocalTeam, int iTargetTeam, bool bRelative)
 }
 
 // Add this function
-Color_t CColor::GetTeamNameColor( CTFPlayer* pLocal, CTFPlayer* pPlayer, bool bRelative)
+Color_t CColor::GetEntityNameColor(CTFPlayer* pLocal, CBaseEntity* pEntity, bool bRelative)
 {
-	int iLocalTeam = pLocal->m_iTeamNum( );
-	int iTargetTeam = pPlayer->m_iTeamNum( );
+	int iLocalTeam = pLocal->m_iTeamNum();
+	int iTargetTeam = pEntity->m_iTeamNum();
 
-	if ( pPlayer == pLocal )
+	if (pEntity == pLocal)
 	{
 		return Vars::Colors::LocalName.Value;
 	}
-	else if ( pPlayer->entindex( ) == G::Target.first )
+	else if (pEntity->entindex() == G::Target.first)
 	{
 		return Vars::Colors::TargetName.Value;
 	}
-	else if ( pPlayer->IsFriend( ) )
+
+	if (pEntity->IsPlayer())
 	{
-		return Vars::Colors::FriendName.Value;
+		if (pEntity->As<CTFPlayer>()->IsFriend())
+		{
+			return Vars::Colors::FriendName.Value;
+		}
+		else
+		{
+			if (bRelative)
+				return iLocalTeam == iTargetTeam ? Vars::Colors::TeamName.Value : Vars::Colors::EnemyName.Value;
+			else
+			{
+				switch (iTargetTeam)
+				{
+				case 2: return Vars::Colors::TeamRedName.Value;
+				case 3: return Vars::Colors::TeamBluName.Value;
+				}
+			}
+		}
 	}
 	else
 	{
-		if ( bRelative )
+		if (bRelative)
 			return iLocalTeam == iTargetTeam ? Vars::Colors::TeamName.Value : Vars::Colors::EnemyName.Value;
 		else
 		{
-			switch ( iTargetTeam )
+			switch (iTargetTeam)
 			{
-				case 2: return Vars::Colors::TeamRedName.Value;
-				case 3: return Vars::Colors::TeamBluName.Value;
+			case 2: return Vars::Colors::TeamRedName.Value;
+			case 3: return Vars::Colors::TeamBluName.Value;
 			}
 		}
 	}
