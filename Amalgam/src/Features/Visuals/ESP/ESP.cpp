@@ -293,8 +293,8 @@ void CESP::StorePlayers(CTFPlayer* pLocal)
 				if (pPlayer->InCond(TF_COND_REGENONDAMAGEBUFF))
 					tCache.m_vText.push_back({ ESPTextEnum::Right, "CONCH", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 
-				if (pPlayer->InCond(TF_COND_BLASTJUMPING))
-					tCache.m_vText.push_back({ ESPTextEnum::Right, "BLASTJUMP", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
+				//if (pPlayer->InCond(TF_COND_BLASTJUMPING))
+					//tCache.m_vText.push_back({ ESPTextEnum::Right, "BLASTJUMP", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
 
 				if (pPlayer->InCond(TF_COND_RUNE_STRENGTH))
 					tCache.m_vText.push_back({ ESPTextEnum::Right, "STRENGHT", Vars::Menu::Theme::Active.Value, Vars::Menu::Theme::Background.Value });
@@ -1056,11 +1056,9 @@ void CESP::DrawPlayers()
 				break;
 			case ESPTextEnum::Health:
 				H::Draw.String(fFontHP, l - lOffset, t + iVerticalOffset + h - h * std::min(tCache.m_flHealth, 1.f), tColor, ALIGN_TOPRIGHT, sText.c_str());
-				rOffset += nTallHP;
 				break;
 			case ESPTextEnum::Uber:
 				H::Draw.String(fFontSide, r, y + h, tColor, ALIGN_TOPLEFT, sText.c_str());
-				rOffset += nTallSide;
 				break;
 			}
 		}
@@ -1185,7 +1183,6 @@ void CESP::DrawBuildings()
 				break;
 			case ESPTextEnum::Health:
 				H::Draw.String(fFontHP, l - lOffset, t + iVerticalOffset + h - h * std::min(tCache.m_flHealth, 1.f), tColor, ALIGN_TOPRIGHT, sText.c_str());
-				rOffset += nTallHP;
 				break;
 			}
 		}

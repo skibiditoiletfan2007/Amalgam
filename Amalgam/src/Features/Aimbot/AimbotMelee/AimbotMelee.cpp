@@ -116,8 +116,8 @@ int CAimbotMelee::GetSwingTime(CTFWeaponBase* pWeapon)
 }
 
 void CAimbotMelee::SimulatePlayers(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, std::vector<Target_t> targets,
-								   Vec3& vEyePos, std::unordered_map<int, std::deque<TickRecord>>& pRecordMap,
-								   std::unordered_map<int, std::deque<Vec3>>& mPaths)
+	Vec3& vEyePos, std::unordered_map<int, std::deque<TickRecord>>& pRecordMap,
+	std::unordered_map<int, std::deque<Vec3>>& mPaths)
 {
 	// swing prediction / auto warp
 	const int iSwingTicks = GetSwingTime(pWeapon);
@@ -154,7 +154,7 @@ void CAimbotMelee::SimulatePlayers(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, st
 							!Vars::Aimbot::Melee::SwingPredictLag.Value || tStorage.m_bPredictNetworked ? target.m_pEntity->m_flSimulationTime() + TICKS_TO_TIME(i + 1) : 0.f,
 							{},
 							Vars::Aimbot::Melee::SwingPredictLag.Value ? tStorage.m_vPredictedOrigin : tStorage.m_MoveData.m_vecAbsOrigin
-						});
+							});
 				}
 			}
 		}
@@ -299,16 +299,9 @@ int CAimbotMelee::CanHit(Target_t& target, CTFPlayer* pLocal, CTFWeaponBase* pWe
 					target.m_pEntity->m_vecMins(), target.m_pEntity->m_vecMaxs() });
 			else
 			{
-					matrix3x4 aBones[MAXSTUDIOBONES];
-					if (!target.m_pEntity->SetupBones(aBones, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, target.m_pEntity->m_flSimulationTime()))
-						return false;
-
-					vRecords.push_front({
-						target.m_pEntity->m_flSimulationTime(),
-						*reinterpret_cast<BoneMatrix*>(&aBones),
-						target.m_pEntity->m_vecOrigin()
-						});
-
+				matrix3x4 aBones[MAXSTUDIOBONES];
+				if (!target.m_pEntity->SetupBones(aBones, MAXSTUDIOBONES, BONE_USED_BY_ANYTHING, target.m_pEntity->m_flSimulationTime()))
+					return false;
 
 				vRecords.push_front({ target.m_pEntity->m_flSimulationTime(), *reinterpret_cast<BoneMatrix*>(&aBones), target.m_pEntity->m_vecOrigin(),
 					target.m_pEntity->m_vecMins(), target.m_pEntity->m_vecMaxs() });
@@ -385,7 +378,6 @@ int CAimbotMelee::CanHit(Target_t& target, CTFPlayer* pLocal, CTFWeaponBase* pWe
 
 			SDK::Trace(vEyePos, vTraceEnd, MASK_SHOT | CONTENTS_GRATE, &filter, &trace);
 			if (trace.m_pEnt && trace.m_pEnt == target.m_pEntity)
-
 				return 2;
 		}
 	}
@@ -483,10 +475,7 @@ void CAimbotMelee::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd
 
 	for (auto& target : targets)
 	{
-		G::Target = { target.m_pEntity->entindex(), I::GlobalVars->tickcount };
-
-		const auto iResult = CanHit(target, pLocal, pWeapon, vEyePos, pRecordMap[target.m_pEntity->entindex()]);;
-
+		const auto iResult = CanHit(target, pLocal, pWeapon, vEyePos, pRecordMap[target.m_pEntity->entindex()]);
 		if (!iResult) continue;
 		if (iResult == 2)
 		{
@@ -494,8 +483,8 @@ void CAimbotMelee::Run(CTFPlayer* pLocal, CTFWeaponBase* pWeapon, CUserCmd* pCmd
 			break;
 		}
 
-		G::Target = { target.m_pEntity->entindex(), 0 };
-		G::AimPosition = { target.m_vPos, 0 };
+		G::Target = { target.m_pEntity->entindex(), I::GlobalVars->tickcount };
+		G::AimPosition = { target.m_vPos, I::GlobalVars->tickcount };
 
 		if (Vars::Aimbot::General::AutoShoot.Value && pWeapon->m_flSmackTime() < 0.f)
 		{
