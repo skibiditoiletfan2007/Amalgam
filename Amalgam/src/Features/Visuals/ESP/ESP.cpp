@@ -1056,11 +1056,11 @@ void CESP::DrawPlayers()
 				break;
 			case ESPTextEnum::Health:
 				H::Draw.String(fFontHP, l - lOffset, t + iVerticalOffset + h - h * std::min(tCache.m_flHealth, 1.f), tColor, ALIGN_TOPRIGHT, sText.c_str());
-				rOffset += nTallHP;
+				//rOffset += nTallHP;
 				break;
 			case ESPTextEnum::Uber:
 				H::Draw.String(fFontSide, r, y + h, tColor, ALIGN_TOPLEFT, sText.c_str());
-				rOffset += nTallSide;
+				//rOffset += nTallSide;
 				break;
 			}
 		}
