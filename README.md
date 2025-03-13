@@ -26,7 +26,7 @@
   </a>
 </p>
 
-###### AVX2 may be faster than SSE2 though not all CPUs support it (Steam > Help > System Information > Processor Information > AVX2). Freetype uses freetype as the text rasterizer and includes some custom fonts, which results in better looking text but larger DLL sizes. PDBs are for developer use
+###### AVX2 may be faster than SSE2 though not all CPUs support it (Steam > Help > System Information > Processor Information > AVX2). Freetype uses freetype as the text rasterizer and includes some custom fonts, which results in better looking text but larger DLL sizes. PDBs are for developer use.
 
 # Amalgam
 
